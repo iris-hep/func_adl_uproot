@@ -19,7 +19,7 @@ def ast_executor(ast_node):
         temp_source_file.write(output_array_name + ' = ' + rep + '\n')
         temp_source_file.write("awkward.save(" + repr(output_file_name) + ", " + output_array_name + ", mode='w')\n")
     os.system('python ' + temp_source_file_name)
-    os.remove('temp.py')
+    os.remove(temp_source_file_name)
     output = awkward.load(output_file_name)
     os.remove(output_file_name)
     return output
