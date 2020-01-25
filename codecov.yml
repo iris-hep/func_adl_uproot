@@ -1,2 +1,3 @@
 comment: false
-ignore: tests
+ignore:
+ - 'tests'
