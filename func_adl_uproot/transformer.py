@@ -115,7 +115,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             raise NameError('Unknown id: ' + id)
 
     def visit_Name(self, node):
-        if isinstance(node.ctx, ast.Param):
+        if hasattr(node, 'ctx') and isinstance(node.ctx, ast.Param):
             node.rep = node.id
         else:
             node.rep = self.resolve_id(node.id)
@@ -233,8 +233,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 paths = [''.join(urllib.parse.urlparse(ast.literal_eval(url))[1:]) for url in urls]
                 source_rep = repr(paths[0])
             node.rep = ('(lambda input_file: '
-                        + "uproot.open(input_file).values()[0].arrays(namedecode='utf-8'))"
-                        + '(' + source_rep + ')')
+                        + 'awkward.Table('
+                        + "uproot.open(input_file).values()[0].arrays(namedecode='utf-8')"
+                        + '))(' + source_rep + ')')
         else:
             func_rep = self.get_rep(node.func)
             args_rep = ', '.join(self.get_rep(arg) for arg in node.args)
