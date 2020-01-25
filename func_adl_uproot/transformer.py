@@ -231,11 +231,10 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 if len(urls) > 1:
                     raise IndexError('Cannot handle multiple files at once in uproot backend')
                 paths = [''.join(urllib.parse.urlparse(ast.literal_eval(url))[1:]) for url in urls]
-                source_rep = repr(paths)
-            node.rep = ("(lambda input_files:"
-                        + " uproot.tree.lazyarrays(input_files,"
-                        + " uproot.open(input_files[0]).keys()[0],"
-                        + " namedecode='utf-8'))(" + source_rep + ")")
+                source_rep = repr(paths[0])
+            node.rep = ('(lambda input_file: '
+                        + "uproot.open(input_file).values()[0].arrays(namedecode='utf-8'))"
+                        + '(' + source_rep + ')')
         else:
             func_rep = self.get_rep(node.func)
             args_rep = ', '.join(self.get_rep(arg) for arg in node.args)

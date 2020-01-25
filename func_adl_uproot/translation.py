@@ -13,6 +13,9 @@ def generate_python_source(ast, array_name='output_array', array_pathname='outpu
     qastle.insert_linq_nodes(ast)
     source = 'import awkward\n'
     source += 'import uproot\n'
+    source += 'import sys\n'
+    source += 'if len(sys.argv) > 2:\n'
+    source += "    raise IndexError('Cannot handle multiple files at once in uproot backend')\n"
     source += array_name + ' = ' + python_ast_to_python_source(ast) + '\n'
     source += 'awkward.save(' + repr(array_pathname) + ', ' + array_name + ", mode='w')\n"
     return source
