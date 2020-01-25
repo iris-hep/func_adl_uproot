@@ -191,7 +191,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def visit_Lambda(self, node):
-        arg_strs = [arg_node.arg for arg_node in node.args.args]
+        arg_strs = [self.get_rep(arg_node) for arg_node in node.args.args]
         args_rep = ', '.join(arg_strs)
         for arg_str in arg_strs:
             if arg_str in self._id_scopes:
@@ -207,6 +207,10 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             self._id_scopes[arg_str] -= 1
             if self._id_scopes[arg_str] == 0:
                 del self._id_scopes[arg_str]
+        return node
+
+    def visit_arg(self, node):
+        node.rep = node.arg
         return node
 
     def visit_Call(self, node):
