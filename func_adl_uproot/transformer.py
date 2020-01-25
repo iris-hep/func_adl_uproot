@@ -77,6 +77,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
 
     def visit_Num(self, node):
         node.rep = repr(node.n)
+        if node.n < 0:
+            node.rep = '(' + node.rep + ')'
         return node
 
     def visit_Str(self, node):
