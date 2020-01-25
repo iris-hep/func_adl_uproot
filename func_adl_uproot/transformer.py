@@ -115,7 +115,10 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             raise NameError('Unknown id: ' + id)
 
     def visit_Name(self, node):
-        node.rep = self.resolve_id(node.id)
+        if isinstance(node.ctx, ast.Param):
+            node.rep = node.id
+        else:
+            node.rep = self.resolve_id(node.id)
         return node
 
     def visit_NameConstant(self, node):
