@@ -260,7 +260,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def visit_SelectMany(self, node):
-        call_node = self.visit(ast.Call(ast.Attribute(node, 'flatten')))
+        node = self.visit_Select(node)
+        call_node = self.visit(ast.Call(ast.Attribute(node, 'flatten'), []))
         node.rep = self.get_rep(call_node)
         return node
 
