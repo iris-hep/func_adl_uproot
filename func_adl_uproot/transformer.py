@@ -1,8 +1,8 @@
 import ast
 import urllib
 
-import uproot
 import awkward
+import uproot
 
 unary_op_dict = {ast.UAdd: '+',
                  ast.USub: '-',
@@ -36,7 +36,8 @@ compare_op_dict = {ast.Eq: '==',
                    ast.In: 'in',
                    ast.NotIn: 'not in'}
 
-class ast_transformer(ast.NodeTransformer):
+
+class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def __init__(self):
         self._id_scopes = {}
 
@@ -94,7 +95,12 @@ class ast_transformer(ast.NodeTransformer):
         return node
 
     def visit_Dict(self, node):
-        node.rep = '{' + ', '.join(self.get_rep(key) + ': ' + self.get_rep(value) for key, value in zip(node.keys, node.values)) + '}'
+        node.rep = ('{'
+                    + ', '.join(self.get_rep(key)
+                                + ': '
+                                + self.get_rep(value) for key, value in zip(node.keys,
+                                                                            node.values))
+                    + '}')
         return node
 
     def get_globals(self):
@@ -128,14 +134,16 @@ class ast_transformer(ast.NodeTransformer):
             raise SyntaxError('Unimplemented binary operation: ' + node.op)
         operator_rep = bin_op_dict[type(node.op)]
         right_rep = self.get_rep(node.right)
-        node.rep = '(' + left_rep + ' ' + operator_rep +  ' ' + right_rep + ')'
+        node.rep = '(' + left_rep + ' ' + operator_rep + ' ' + right_rep + ')'
         return node
 
     def visit_BoolOp(self, node):
         if type(node.op) not in bool_op_dict:
             raise SyntaxError('Unimplemented boolean operation: ' + node.op)
         operator_rep = bool_op_dict[type(node.op)]
-        node.rep = '(' + (' ' + operator_rep + ' ').join(self.get_rep(value) for value in node.values) + ')'
+        node.rep = ('('
+                    + (' ' + operator_rep + ' ').join(self.get_rep(value) for value in node.values)
+                    + ')')
         return node
 
     def visit_Compare(self, node):
@@ -175,7 +183,9 @@ class ast_transformer(ast.NodeTransformer):
 
     def visit_Attribute(self, node):
         value_rep = self.get_rep(node.value)
-        node.rep = '(' + value_rep + '.' + node.attr + ' if hasattr(' + value_rep + ", '" + node.attr + "') else " + value_rep + "['" + node.attr + "'])"
+        node.rep = ('(' + value_rep + '.' + node.attr
+                    + ' if hasattr(' + value_rep + ", '" + node.attr
+                    + "') else " + value_rep + "['" + node.attr + "'])")
         return node
 
     def visit_Lambda(self, node):
@@ -187,7 +197,10 @@ class ast_transformer(ast.NodeTransformer):
             else:
                 self._id_scopes[arg_str] = 1
         body_rep = self.get_rep(node.body)
-        node.rep = '(lambda ' + args_rep + ': ' + body_rep + ')'
+        node.rep = '(lambda'
+        if args_rep != '':
+            node.rep += ' '
+        node.rep += args_rep + ': ' + body_rep + ')'
         for arg_str in arg_strs:
             self._id_scopes[arg_str] -= 1
             if self._id_scopes[arg_str] == 0:
@@ -196,11 +209,24 @@ class ast_transformer(ast.NodeTransformer):
 
     def visit_Call(self, node):
         if isinstance(node.func, ast.Name) and node.func.id == 'EventDataset':
-            if len(node.args) != 1:
-                raise TypeError('EventDataset should have exactly one argument, found ' + str(len(node.args)))
-            urls = node.args[0].elts
-            paths = [''.join(urllib.parse.urlparse(ast.literal_eval(url))[1:]) for url in urls]
-            node.rep = "(lambda input_files: uproot.tree.lazyarrays(input_files, uproot.open(input_files[0]).keys()[0], namedecode='utf-8'))(" + repr(paths) + ")"
+            if len(node.args) == 0:
+                source_rep = 'sys.argv[1]'
+            else:
+                if len(node.args) > 1:
+                    raise TypeError('EventDataset() should have no more than one argument, found '
+                                    + str(len(node.args)))
+                if hasattr(node.args[0], 'elts'):
+                    urls = node.args[0].elts
+                else:
+                    urls = [node.args[0]]
+                if len(urls) > 1:
+                    raise IndexError('Cannot handle multiple files at once in uproot backend')
+                paths = [''.join(urllib.parse.urlparse(ast.literal_eval(url))[1:]) for url in urls]
+                source_rep = repr(paths)
+            node.rep = ("(lambda input_files:"
+                        + " uproot.tree.lazyarrays(input_files,"
+                        + " uproot.open(input_files[0]).keys()[0],"
+                        + " namedecode='utf-8'))(" + source_rep + ")")
         else:
             func_rep = self.get_rep(node.func)
             args_rep = ', '.join(self.get_rep(arg) for arg in node.args)
@@ -209,13 +235,17 @@ class ast_transformer(ast.NodeTransformer):
 
     def visit_Select(self, node):
         if type(node.selector) is not ast.Lambda:
-            raise TypeError('Argument to Select() must be a lambda function, found ' + node.selector)
+            raise TypeError('Argument to Select() must be a lambda function, found '
+                            + node.selector)
         if len(node.selector.args.args) != 1:
-            raise TypeError('Lambda function in Select() must have exactly one argument, found ' + len(node.selector.args.args))
+            raise TypeError('Lambda function in Select() must have exactly one argument, found '
+                            + len(node.selector.args.args))
         if type(node.selector.body) in (ast.List, ast.Tuple):
-            node.selector.body = ast.Call(ast.Attribute(ast.Name('awkward'), 'Table'), node.selector.body.elts)
+            node.selector.body = ast.Call(ast.Attribute(ast.Name('awkward'), 'Table'),
+                                          node.selector.body.elts)
         if type(node.selector.body) is ast.Dict:
-            node.selector.body = ast.Call(ast.Attribute(ast.Name('awkward'), 'Table'), [node.selector.body])
+            node.selector.body = ast.Call(ast.Attribute(ast.Name('awkward'), 'Table'),
+                                          [node.selector.body])
         call_node = self.visit(ast.Call(node.selector, [node.source]))
         node.rep = self.get_rep(call_node)
         return node
@@ -227,10 +257,13 @@ class ast_transformer(ast.NodeTransformer):
 
     def visit_Where(self, node):
         if type(node.predicate) is not ast.Lambda:
-            raise TypeError('Argument to Where() must be a lambda function, found ' + node.predicate)
+            raise TypeError('Argument to Where() must be a lambda function, found '
+                            + node.predicate)
         if len(node.predicate.args.args) != 1:
-            raise TypeError('Lambda function in Where() must have exactly one argument, found ' + len(node.predicate.args.args))
-        node.predicate.body = ast.Subscript(ast.Name(node.predicate.args.args[0].arg), ast.Index(node.predicate.body))
+            raise TypeError('Lambda function in Where() must have exactly one argument, found '
+                            + len(node.predicate.args.args))
+        node.predicate.body = ast.Subscript(ast.Name(node.predicate.args.args[0].arg),
+                                            ast.Index(node.predicate.body))
         call_node = self.visit(ast.Call(node.predicate, [node.source]))
         node.rep = self.get_rep(call_node)
         return node
