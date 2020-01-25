@@ -45,13 +45,13 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if hasattr(node, 'rep'):
             return node
         else:
-            return super().visit(node)
+            return super(PythonSourceGeneratorTransformer, self).visit(node)
 
     def generic_visit(self, node):
         if hasattr(node, 'rep'):
             return node
         else:
-            return super().generic_visit(node)
+            return super(PythonSourceGeneratorTransformer, self).generic_visit(node)
 
     def get_rep(self, node):
         if node is None:
