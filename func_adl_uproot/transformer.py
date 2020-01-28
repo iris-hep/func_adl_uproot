@@ -231,7 +231,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 paths = [''.join(urllib.parse.urlparse(ast.literal_eval(url))[1:]) for url in urls]
                 source_rep = repr(paths)
             node.rep = ('(lambda input_files: '
-                        + "uproot.lazyarrays(input_files, uproot.open(input_files[0]).keys()[0], namedecode='utf-8')"
+                        + 'uproot.lazyarrays(input_files, '
+                        + 'uproot.open(input_files[0]).keys()[0], '
+                        + "namedecode='utf-8')"
                         + ')(' + source_rep + ')')
         else:
             func_rep = self.get_rep(node.func)
