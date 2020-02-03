@@ -39,6 +39,7 @@ compare_op_dict = {ast.Eq: '==',
                    ast.In: 'in',
                    ast.NotIn: 'not in'}
 
+
 class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def __init__(self):
         self._id_scopes = {}
