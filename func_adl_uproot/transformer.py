@@ -4,6 +4,9 @@ import urllib
 import awkward
 import uproot
 
+input_filenames_argument_name = 'input_filenames'
+tree_name_argument_name = 'tree_name'
+
 unary_op_dict = {ast.UAdd: '+',
                  ast.USub: '-',
                  ast.Not: 'not ',
@@ -218,23 +221,34 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
 
     def visit_Call(self, node):
         if isinstance(node.func, ast.Name) and node.func.id == 'EventDataset':
-            if len(node.args) == 0:
-                source_rep = 'sys.argv[1:]'
-            else:
-                if len(node.args) > 1:
-                    raise TypeError('EventDataset() should have no more than one argument, found '
-                                    + str(len(node.args)))
+            if len(node.args) > 2:
+                raise TypeError('EventDataset() should have no more than two arguments, found '
+                                + str(len(node.args)))
+
+            if len(node.args) >= 1:
                 if hasattr(node.args[0], 'elts'):
                     urls = node.args[0].elts
                 else:
                     urls = [node.args[0]]
                 paths = [''.join(urllib.parse.urlparse(ast.literal_eval(url))[1:]) for url in urls]
-                source_rep = repr(paths)
+                source_rep = (input_filenames_argument_name + ' '
+                              + 'if ' + input_filenames_argument_name + ' is not None '
+                              + 'else ' + repr(paths))
+            else:
+                source_rep = input_filenames_argument_name
+
+            if len(node.args) >= 2:
+                local_tree_name_rep = self.get_rep(node.args[1])
+            else:
+                local_tree_name_rep = 'uproot.open(input_files[0]).keys()[0]'
+            tree_name_rep = (tree_name_argument_name + ' '
+                             + 'if ' + tree_name_argument_name + ' is not None '
+                             + 'else ' + local_tree_name_rep)
+
             node.rep = ('(lambda input_files: '
                         + 'uproot.lazyarrays(input_files, '
-                        + 'uproot.open(input_files[0]).keys()[0], '
-                        + "namedecode='utf-8')"
-                        + ')(' + source_rep + ')')
+                        + tree_name_rep
+                        + '))(' + source_rep + ')')
         else:
             func_rep = self.get_rep(node.func)
             args_rep = ', '.join(self.get_rep(arg) for arg in node.args)
