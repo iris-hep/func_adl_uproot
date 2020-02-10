@@ -240,7 +240,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             if len(node.args) >= 2:
                 local_tree_name_rep = self.get_rep(node.args[1])
             else:
-                local_tree_name_rep = 'uproot.open(input_files[0]).keys()[0]'
+                local_tree_name_rep = "(lambda key_array: key_array[key_array[:, 1] == 'TTree'][:, 0])(awkward.Table(uproot.open(input_files[0]).classnames()).unzip()[0])[0]"
             tree_name_rep = (tree_name_argument_name + ' '
                              + 'if ' + tree_name_argument_name + ' is not None '
                              + 'else ' + local_tree_name_rep)
