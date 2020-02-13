@@ -20,6 +20,12 @@ def assert_equivalent_source(python_source):
     assert ast.dump(ast.parse(rep)) == ast.dump(python_ast)
 
 
+def assert_modified_source(initial_source, final_source):
+    python_ast = ast.parse(initial_source)
+    rep = python_ast_to_python_source(python_ast)
+    assert rep == final_source
+
+
 def test_literals():
     assert_identical_literal('')
     assert_identical_literal('a')
@@ -56,7 +62,7 @@ def test_globals():
 def test_unary_ops():
     assert_equivalent_source('+1')
     assert_identical_source('(-1)')
-    assert_identical_source('(not True)')
+    assert_modified_source('(not True)', '(~True)')
 
 
 def test_binary_ops():
@@ -68,8 +74,8 @@ def test_binary_ops():
 
 
 def test_boolean_ops():
-    assert_identical_source('(True and False)')
-    assert_identical_source('(True or False)')
+    assert_modified_source('(True and False)', '(True & False)')
+    assert_modified_source('(True or False)', '(True | False)')
 
 
 def test_comparison_ops():
