@@ -112,7 +112,10 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return globals()
 
     def resolve_id(self, id):
-        if id in self._id_scopes or id in self.get_globals() or id in ('True', 'False', 'None'):
+        if (id in ('True', 'False', 'None')
+           or id in self._id_scopes
+           or id in self.get_globals()
+           or id in ('abs', 'all', 'any', 'len', 'max', 'min')):
             return id
         else:
             raise NameError('Unknown id: ' + id)

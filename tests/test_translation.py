@@ -39,6 +39,15 @@ def test_literals():
     assert_identical_literal(None)
 
 
+def test_builtins():
+    assert_identical_source('abs')
+    assert_identical_source('all')
+    assert_identical_source('any')
+    assert_identical_source('len')
+    assert_identical_source('max')
+    assert_identical_source('min')
+
+
 def test_globals():
     assert_identical_source('uproot')
     assert_identical_source('awkward')
