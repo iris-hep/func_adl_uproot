@@ -9,7 +9,7 @@ tree_name_argument_name = 'tree_name'
 
 unary_op_dict = {ast.UAdd: '+',
                  ast.USub: '-',
-                 ast.Not: 'not ',
+                 ast.Not: '~',
                  ast.Invert: '~'}
 
 bin_op_dict = {ast.Add: '+',
@@ -25,8 +25,8 @@ bin_op_dict = {ast.Add: '+',
                ast.BitXor: '^',
                ast.BitAnd: '&'}
 
-bool_op_dict = {ast.And: 'and',
-                ast.Or: 'or'}
+bool_op_dict = {ast.And: '&',
+                ast.Or: '|'}
 
 compare_op_dict = {ast.Eq: '==',
                    ast.NotEq: '!=',
