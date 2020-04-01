@@ -62,7 +62,7 @@ def test_globals():
 def test_unary_ops():
     assert_equivalent_source('+1')
     assert_identical_source('(-1)')
-    assert_modified_source('(not True)', '(~True)')
+    assert_modified_source('not True', 'np.logical_not(True)')
 
 
 def test_binary_ops():
@@ -70,12 +70,19 @@ def test_binary_ops():
     assert_identical_source('(1 - 2)')
     assert_identical_source('(1 * 2)')
     assert_identical_source('(1 / 2)')
+    assert_identical_source('(1 % 2)')
     assert_identical_source('(1 ** 2)')
+    assert_identical_source('(1 // 2)')
+    assert_identical_source('(1 & 2)')
+    assert_identical_source('(1 | 2)')
+    assert_identical_source('(1 ^ 2)')
+    assert_identical_source('(1 << 2)')
+    assert_identical_source('(1 >> 2)')
 
 
 def test_boolean_ops():
-    assert_modified_source('(True and False)', '(True & False)')
-    assert_modified_source('(True or False)', '(True | False)')
+    assert_modified_source('True and False', 'np.logical_and(True, False)')
+    assert_modified_source('True or False', 'np.logical_or(True, False)')
 
 
 def test_comparison_ops():
@@ -85,8 +92,16 @@ def test_comparison_ops():
     assert_identical_source('(1 <= 2)')
     assert_identical_source('(1 > 2)')
     assert_identical_source('(1 >= 2)')
+    assert_identical_source('(1 is 2)')
+    assert_identical_source('(1 is not 2)')
+    assert_identical_source('(1 in [2])')
+    assert_identical_source('(1 not in [2])')
     assert_identical_source('(1 < 2 < 3)')
     assert_identical_source('(1 < 2 < 3 < 4)')
+
+
+def test_conditional():
+    assert_identical_source('(1 if True else 0)')
 
 
 def test_subscripts():

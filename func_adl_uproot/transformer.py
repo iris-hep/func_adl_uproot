@@ -9,7 +9,6 @@ tree_name_argument_name = 'tree_name'
 
 unary_op_dict = {ast.UAdd: '+',
                  ast.USub: '-',
-                 ast.Not: '~',
                  ast.Invert: '~'}
 
 bin_op_dict = {ast.Add: '+',
@@ -25,8 +24,8 @@ bin_op_dict = {ast.Add: '+',
                ast.BitXor: '^',
                ast.BitAnd: '&'}
 
-bool_op_dict = {ast.And: '&',
-                ast.Or: '|'}
+bool_op_dict = {ast.And: 'np.logical_and',
+                ast.Or: 'np.logical_or'}
 
 compare_op_dict = {ast.Eq: '==',
                    ast.NotEq: '!=',
@@ -132,6 +131,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def visit_UnaryOp(self, node):
+        if type(node.op) is ast.Not:
+            node.rep = 'np.logical_not(' + self.get_rep(node.operand) + ')'
+            return node
         if type(node.op) not in unary_op_dict:
             raise SyntaxError('Unimplemented unary operation: ' + node.op)
         operator_rep = unary_op_dict[type(node.op)]
@@ -151,9 +153,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def visit_BoolOp(self, node):
         if type(node.op) not in bool_op_dict:
             raise SyntaxError('Unimplemented boolean operation: ' + node.op)
-        operator_rep = bool_op_dict[type(node.op)]
-        node.rep = ('('
-                    + (' ' + operator_rep + ' ').join(self.get_rep(value) for value in node.values)
+        bool_op_func = bool_op_dict[type(node.op)]
+        node.rep = (bool_op_func + '('
+                    + ', '.join([self.get_rep(value) for value in node.values])
                     + ')')
         return node
 
@@ -167,6 +169,13 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             comparator_rep = self.get_rep(comparator)
             node.rep += ' ' + operator_rep + ' ' + comparator_rep
         node.rep += ')'
+        return node
+
+    def visit_IfExp(self, node):
+        body_rep = self.get_rep(node.body)
+        test_rep = self.get_rep(node.test)
+        orelse_rep = self.get_rep(node.orelse)
+        node.rep = '(' + body_rep + ' if ' + test_rep + ' else ' + orelse_rep + ')'
         return node
 
     def visit_Index(self, node):
