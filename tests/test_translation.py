@@ -100,6 +100,10 @@ def test_comparison_ops():
     assert_identical_source('(1 < 2 < 3 < 4)')
 
 
+def test_conditional():
+    assert_identical_source('(a if b else c)')
+
+
 def test_subscripts():
     assert_identical_source('uproot[0]')
     assert_identical_source("uproot['a']")
