@@ -154,7 +154,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if type(node.op) not in bool_op_dict:
             raise SyntaxError('Unimplemented boolean operation: ' + node.op)
         bool_op_func = bool_op_dict[type(node.op)]
-        node.rep = bool_op_func + '(' + ', '.join([self.get_rep(value) for value in node.values]) + ')'
+        node.rep = (bool_op_func + '('
+                    + ', '.join([self.get_rep(value) for value in node.values])
+                    + ')')
         return node
 
     def visit_Compare(self, node):
