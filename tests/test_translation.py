@@ -101,7 +101,7 @@ def test_comparison_ops():
 
 
 def test_conditional():
-    assert_identical_source('(a if b else c)')
+    assert_identical_source('(1 if True else 0)')
 
 
 def test_subscripts():
