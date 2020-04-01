@@ -171,6 +171,13 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         node.rep += ')'
         return node
 
+    def visit_IfExp(self, node):
+        body_rep = self.get_rep(node.body)
+        test_rep = self.get_rep(node.test)
+        orelse_rep = self.get_rep(node.orelse)
+        node.rep = '(' + body_rep + ' if ' + test_rep + ' else ' + orelse_rep + ')'
+        return node
+
     def visit_Index(self, node):
         node.rep = self.get_rep(node.value)
         return node
