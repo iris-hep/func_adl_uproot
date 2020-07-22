@@ -15,4 +15,4 @@ setuptools.setup(name='func_adl_uproot',
                                    'uproot>=3.6.0'],
                  author='Mason Proffitt',
                  author_email='masonlp@uw.edu',
-                 url='https://github.com/iris-hep/func_adl.uproot')
+                 url='https://github.com/iris-hep/func_adl_uproot')
