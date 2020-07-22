@@ -109,6 +109,11 @@ def test_subscripts():
     assert_identical_source("uproot['a']")
 
 
+def test_slice():
+    assert_identical_source('uproot[:]')
+    assert_identical_source('uproot[1:4:2]')
+
+
 # def test_attribute():
 #     assert_identical_source('uproot.a')
 #     assert_identical_source('uproot.b.c')
