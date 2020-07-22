@@ -112,9 +112,8 @@ def test_subscripts():
     assert_identical_source('uproot[:, :]')
 
 
-# def test_attribute():
-#     assert_identical_source('uproot.a')
-#     assert_identical_source('uproot.b.c')
+def test_attribute():
+    assert_modified_source('uproot.a', "(uproot.a if hasattr(uproot, 'a') else uproot['a'])")
 
 
 def test_lambda():
