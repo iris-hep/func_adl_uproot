@@ -107,11 +107,9 @@ def test_conditional():
 def test_subscripts():
     assert_identical_source('uproot[0]')
     assert_identical_source("uproot['a']")
-
-
-def test_slice():
     assert_identical_source('uproot[:]')
     assert_identical_source('uproot[1:4:2]')
+    assert_identical_source('uproot[:, :]')
 
 
 # def test_attribute():
