@@ -278,18 +278,18 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             raise TypeError('Lambda function in Select() must have exactly one argument, found '
                             + len(node.selector.args.args))
         if type(node.selector.body) in (ast.List, ast.Tuple):
-            node.selector.body = ast.Call(ast.Attribute(ast.Name('awkward'), 'Table'),
-                                          node.selector.body.elts)
+            node.selector.body = ast.Call(func=ast.Attribute(ast.Name('awkward'), 'Table'),
+                                          args=node.selector.body.elts)
         if type(node.selector.body) is ast.Dict:
-            node.selector.body = ast.Call(ast.Attribute(ast.Name('awkward'), 'Table'),
-                                          [node.selector.body])
-        call_node = self.visit(ast.Call(node.selector, [node.source]))
+            node.selector.body = ast.Call(func=ast.Attribute(ast.Name('awkward'), 'Table'),
+                                          args=[node.selector.body])
+        call_node = self.visit(ast.Call(func=node.selector, args=[node.source]))
         node.rep = self.get_rep(call_node)
         return node
 
     def visit_SelectMany(self, node):
         node = self.visit_Select(node)
-        call_node = self.visit(ast.Call(ast.Attribute(node, 'flatten'), []))
+        call_node = self.visit(ast.Call(func=ast.Attribute(node, 'flatten'), args=[]))
         node.rep = self.get_rep(call_node)
         return node
 
@@ -302,6 +302,6 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                             + len(node.predicate.args.args))
         node.predicate.body = ast.Subscript(ast.Name(node.predicate.args.args[0].arg),
                                             ast.Index(node.predicate.body))
-        call_node = self.visit(ast.Call(node.predicate, [node.source]))
+        call_node = self.visit(ast.Call(func=node.predicate, args=[node.source]))
         node.rep = self.get_rep(call_node)
         return node
