@@ -309,7 +309,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         else:
             subscriptable = node.predicate.args.args[0].arg
 
-        node.predicate.body = ast.Subscript(ast.Name(subscriptable),
+        node.predicate.body = ast.Subscript(ast.Name(id=subscriptable),
                                             ast.Index(node.predicate.body))
         call_node = self.visit(ast.Call(func=node.predicate, args=[node.source]))
         node.rep = self.get_rep(call_node)
