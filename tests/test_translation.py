@@ -136,6 +136,11 @@ def test_call():
     assert_identical_source('uproot()')
     assert_identical_source('uproot(1)')
     assert_identical_source('uproot(1, 2)')
+    assert_modified_source("EventDataset('filename', 'treename')",
+                           '(lambda input_files:'
+                           + ' uproot.lazyarrays(input_files,'
+                           + " tree_name if tree_name is not None else 'treename'))"
+                           + "(input_filenames if input_filenames is not None else ['filename'])")
 
 
 def test_select():
