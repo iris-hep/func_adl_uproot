@@ -1,6 +1,9 @@
 import ast
-import urllib
 import sys
+if sys.version_info[0] < 3:
+    from urlparse import urlparse
+else:
+    from urllib.parse import urlparse
 
 import awkward
 import uproot
@@ -243,7 +246,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                     urls = node.args[0].elts
                 else:
                     urls = [node.args[0]]
-                paths = [''.join(urllib.parse.urlparse(ast.literal_eval(url))[1:]) for url in urls]
+                paths = [''.join(urlparse(ast.literal_eval(url))[1:]) for url in urls]
                 source_rep = (input_filenames_argument_name + ' '
                               + 'if ' + input_filenames_argument_name + ' is not None '
                               + 'else ' + repr(paths))
