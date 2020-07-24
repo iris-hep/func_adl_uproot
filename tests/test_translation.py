@@ -1,10 +1,12 @@
 import ast
 
+import qastle
+
 from func_adl_uproot import python_ast_to_python_source
 
 
 def assert_identical_source(python_source):
-    python_ast = ast.parse(python_source)
+    python_ast = qastle.insert_linq_nodes(ast.parse(python_source))
     rep = python_ast_to_python_source(python_ast)
     assert rep == python_source
 
@@ -21,9 +23,17 @@ def assert_equivalent_source(python_source):
 
 
 def assert_modified_source(initial_source, final_source):
-    python_ast = ast.parse(initial_source)
+    python_ast = qastle.insert_linq_nodes(ast.parse(initial_source))
     rep = python_ast_to_python_source(python_ast)
     assert rep == final_source
+
+
+def assert_identical_sources_after_translation(source_1, source_2):
+    python_ast_1 = qastle.insert_linq_nodes(ast.parse(source_1))
+    python_ast_2 = qastle.insert_linq_nodes(ast.parse(source_2))
+    rep_1 = python_ast_to_python_source(python_ast_1)
+    rep_2 = python_ast_to_python_source(python_ast_2)
+    assert rep_1 == rep_2
 
 
 def test_literals():
@@ -127,6 +137,15 @@ def test_call():
     assert_identical_source('uproot(1)')
     assert_identical_source('uproot(1, 2)')
 
-# def test_select():
-# def test_selectmany():
-# def test_where():
+
+def test_select():
+    assert_modified_source('Select(uproot, lambda row: row)', '(lambda row: row)(uproot)')
+
+
+def test_selectmany():
+    assert_identical_sources_after_translation('SelectMany(uproot, lambda row: row)',
+                                               '(lambda row: row)(uproot).flatten()')
+
+
+def test_where():
+    assert_modified_source('Where(uproot, lambda row: True)', '(lambda row: row[True])(uproot)')
