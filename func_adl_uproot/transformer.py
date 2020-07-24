@@ -1,5 +1,6 @@
 import ast
 import urllib
+import sys
 
 import awkward
 import uproot
@@ -278,10 +279,12 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             raise TypeError('Lambda function in Select() must have exactly one argument, found '
                             + len(node.selector.args.args))
         if type(node.selector.body) in (ast.List, ast.Tuple):
-            node.selector.body = ast.Call(func=ast.Attribute(ast.Name('awkward'), 'Table'),
+            node.selector.body = ast.Call(func=ast.Attribute(value=ast.Name('awkward'),
+                                                             attr='Table'),
                                           args=node.selector.body.elts)
         if type(node.selector.body) is ast.Dict:
-            node.selector.body = ast.Call(func=ast.Attribute(ast.Name('awkward'), 'Table'),
+            node.selector.body = ast.Call(func=ast.Attribute(value=ast.Name('awkward'),
+                                                             attr='Table'),
                                           args=[node.selector.body])
         call_node = self.visit(ast.Call(func=node.selector, args=[node.source]))
         node.rep = self.get_rep(call_node)
@@ -289,7 +292,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
 
     def visit_SelectMany(self, node):
         node = self.visit_Select(node)
-        call_node = self.visit(ast.Call(func=ast.Attribute(node, 'flatten'), args=[]))
+        call_node = self.visit(ast.Call(func=ast.Attribute(value=node, attr='flatten'), args=[]))
         node.rep = self.get_rep(call_node)
         return node
 
@@ -300,7 +303,13 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if len(node.predicate.args.args) != 1:
             raise TypeError('Lambda function in Where() must have exactly one argument, found '
                             + len(node.predicate.args.args))
-        node.predicate.body = ast.Subscript(ast.Name(node.predicate.args.args[0].arg),
+
+        if sys.version_info[0] < 3:
+            subscriptable = node.predicate.args.args[0].id
+        else:
+            subscriptable = node.predicate.args.args[0].arg
+
+        node.predicate.body = ast.Subscript(ast.Name(subscriptable),
                                             ast.Index(node.predicate.body))
         call_node = self.visit(ast.Call(func=node.predicate, args=[node.source]))
         node.rep = self.get_rep(call_node)
