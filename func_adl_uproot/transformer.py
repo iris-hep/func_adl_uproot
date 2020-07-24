@@ -1,5 +1,9 @@
 import ast
-import urllib
+import sys
+if sys.version_info[0] < 3:
+    from urlparse import urlparse
+else:
+    from urllib.parse import urlparse
 
 import awkward
 import uproot
@@ -242,7 +246,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                     urls = node.args[0].elts
                 else:
                     urls = [node.args[0]]
-                paths = [''.join(urllib.parse.urlparse(ast.literal_eval(url))[1:]) for url in urls]
+                paths = [''.join(urlparse(ast.literal_eval(url))[1:]) for url in urls]
                 source_rep = (input_filenames_argument_name + ' '
                               + 'if ' + input_filenames_argument_name + ' is not None '
                               + 'else ' + repr(paths))
@@ -278,18 +282,20 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             raise TypeError('Lambda function in Select() must have exactly one argument, found '
                             + len(node.selector.args.args))
         if type(node.selector.body) in (ast.List, ast.Tuple):
-            node.selector.body = ast.Call(ast.Attribute(ast.Name('awkward'), 'Table'),
-                                          node.selector.body.elts)
+            node.selector.body = ast.Call(func=ast.Attribute(value=ast.Name(id='awkward'),
+                                                             attr='Table'),
+                                          args=node.selector.body.elts)
         if type(node.selector.body) is ast.Dict:
-            node.selector.body = ast.Call(ast.Attribute(ast.Name('awkward'), 'Table'),
-                                          [node.selector.body])
-        call_node = self.visit(ast.Call(node.selector, [node.source]))
+            node.selector.body = ast.Call(func=ast.Attribute(value=ast.Name(id='awkward'),
+                                                             attr='Table'),
+                                          args=[node.selector.body])
+        call_node = self.visit(ast.Call(func=node.selector, args=[node.source]))
         node.rep = self.get_rep(call_node)
         return node
 
     def visit_SelectMany(self, node):
         node = self.visit_Select(node)
-        call_node = self.visit(ast.Call(ast.Attribute(node, 'flatten'), []))
+        call_node = self.visit(ast.Call(func=ast.Attribute(value=node, attr='flatten'), args=[]))
         node.rep = self.get_rep(call_node)
         return node
 
@@ -300,8 +306,14 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if len(node.predicate.args.args) != 1:
             raise TypeError('Lambda function in Where() must have exactly one argument, found '
                             + len(node.predicate.args.args))
-        node.predicate.body = ast.Subscript(ast.Name(node.predicate.args.args[0].arg),
-                                            ast.Index(node.predicate.body))
-        call_node = self.visit(ast.Call(node.predicate, [node.source]))
+
+        if sys.version_info[0] < 3:
+            subscriptable = node.predicate.args.args[0].id
+        else:
+            subscriptable = node.predicate.args.args[0].arg
+
+        node.predicate.body = ast.Subscript(value=ast.Name(id=subscriptable),
+                                            slice=ast.Index(node.predicate.body))
+        call_node = self.visit(ast.Call(func=node.predicate, args=[node.source]))
         node.rep = self.get_rep(call_node)
         return node
