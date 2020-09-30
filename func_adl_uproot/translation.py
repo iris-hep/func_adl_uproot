@@ -15,7 +15,7 @@ def generate_python_source(ast, function_name='run_query'):
     source = ('def ' + function_name
               + '(' + input_filenames_argument_name + '=None, '
               + tree_name_argument_name + '=None):\n')
-    source += '    import logging, numpy as np, awkward0 as awkward, uproot3 as uproot\n'
+    source += '    import logging, numpy as np, awkward1, uproot4\n'
     source += '    return ' + python_ast_to_python_source(ast) + '\n'
     return source
 

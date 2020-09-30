@@ -5,8 +5,8 @@ if sys.version_info[0] < 3:
 else:
     from urllib.parse import urlparse
 
-import awkward0 as awkward
-import uproot3 as uproot
+import awkward1
+import uproot4
 
 input_filenames_argument_name = 'input_filenames'
 tree_name_argument_name = 'tree_name'
@@ -202,9 +202,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def visit_Subscript(self, node):
         value_rep = self.get_rep(node.value)
         slice_rep = self.get_rep(node.slice)
-        node.rep = ('(' + value_rep + '[' + value_rep + '.columns[' + slice_rep + ']]'
-                    + ' if isinstance(' + value_rep + ', awkward.Table)'
-                    + ' and ' + value_rep + '.istuple else ' + value_rep + '[' + slice_rep + '])')
+        node.rep = ('(' + value_rep + '[' + value_rep + '.fields[' + slice_rep + ']]'
+                    + ' if isinstance(' + value_rep + ', awkward1.Array)'
+                    + ' else ' + value_rep + '[' + slice_rep + '])')
         return node
 
     def visit_Attribute(self, node):
@@ -258,16 +258,18 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             else:
                 local_tree_name_rep = ('(lambda key_array: '
                                        + "key_array[key_array[:, 1] == 'TTree'][:, 0])("
-                                       + 'awkward.Table(uproot.open(input_files[0]).classnames())'
-                                       + '.unzip()[0])[0]')
-            tree_name_rep = ('(' + tree_name_argument_name + ' '
+                                       + 'awkward1.Table('
+                                       + 'uproot4.open(input_files[0]).classnames()'
+                                       + ').unzip()[0])[0]')
+            tree_name_rep = (tree_name_argument_name + ' '
                              + 'if ' + tree_name_argument_name + ' is not None '
-                             + 'else ' + local_tree_name_rep + ')')
-            node.rep = ('(lambda input_files: '
-                        + 'uproot.lazyarrays(input_files, '
-                        + "logging.getLogger(__name__).info('Using treename=' + repr("
-                        + tree_name_rep + ')) or ' + tree_name_rep
-                        + '))(' + source_rep + ')')
+                             + 'else ' + local_tree_name_rep)
+            node.rep = ('(lambda input_files, tree_name_to_use: '
+                        + "(logging.getLogger(__name__).info('Using treename='"
+                        + ' + repr(tree_name_to_use)),'
+                        + ' uproot4.lazy({input_file: tree_name_to_use'
+                        + ' for input_file in input_files}))[1])'
+                        + '(' + source_rep + ', ' + tree_name_rep + ')')
         else:
             func_rep = self.get_rep(node.func)
             args_rep = ', '.join(self.get_rep(arg) for arg in node.args)
@@ -282,11 +284,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             raise TypeError('Lambda function in Select() must have exactly one argument, found '
                             + len(node.selector.args.args))
         if type(node.selector.body) in (ast.List, ast.Tuple):
-            node.selector.body = ast.Call(func=ast.Attribute(value=ast.Name(id='awkward'),
+            node.selector.body = ast.Call(func=ast.Attribute(value=ast.Name(id='awkward1'),
                                                              attr='Table'),
                                           args=node.selector.body.elts)
         elif type(node.selector.body) is ast.Dict:
-            node.selector.body = ast.Call(func=ast.Attribute(value=ast.Name(id='awkward'),
+            node.selector.body = ast.Call(func=ast.Attribute(value=ast.Name(id='awkward1'),
                                                              attr='Table'),
                                           args=[node.selector.body])
         call_node = ast.Call(func=node.selector, args=[node.source])
@@ -300,19 +302,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if len(node.selector.args.args) != 1:
             raise TypeError('Lambda function in SelectMany() must have exactly one argument, '
                             'found ' + len(node.selector.args.args))
-        if type(node.selector.body) in (ast.List, ast.Tuple):
-            node.selector.body.elts = [ast.Call(func=ast.Attribute(value=element,
-                                                                   attr='flatten'),
-                                                args=[]) for element in node.selector.body.elts]
-        elif type(node.selector.body) is ast.Dict:
-            node.selector.body.values = [ast.Call(func=ast.Attribute(value=dict_value,
-                                                                     attr='flatten'),
-                                                  args=[])
-                                         for dict_value in node.selector.body.values]
-        else:
-            node.selector.body = ast.Call(func=ast.Attribute(value=node.selector.body,
-                                                             attr='flatten'),
-                                          args=[])
+        node.selector.body = ast.Call(func=ast.Attribute(value=ast.Name(id='awkward1'),
+                                                         attr='flatten'),
+                                      args=[node.selector.body])
         call_node = self.visit_Select(node)
         node.rep = self.get_rep(call_node)
         return node
