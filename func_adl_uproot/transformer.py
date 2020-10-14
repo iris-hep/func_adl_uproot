@@ -258,9 +258,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             else:
                 local_tree_name_rep = ('(lambda key_array: '
                                        + "key_array[key_array[:, 1] == 'TTree'][:, 0])("
-                                       + 'awkward1.Table('
-                                       + 'uproot4.open(input_files[0]).classnames()'
-                                       + ').unzip()[0])[0]')
+                                       + 'np.atleast_2d((lambda classnames:'
+                                       + ' np.hstack([list(classnames.keys()),'
+                                       + ' list(classnames.values())]))'
+                                       + '(uproot4.open(input_files[0]).classnames())'
+                                       + '))[0]')
             tree_name_rep = (tree_name_argument_name + ' '
                              + 'if ' + tree_name_argument_name + ' is not None '
                              + 'else ' + local_tree_name_rep)
@@ -283,13 +285,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if len(node.selector.args.args) != 1:
             raise TypeError('Lambda function in Select() must have exactly one argument, found '
                             + len(node.selector.args.args))
-        if type(node.selector.body) in (ast.List, ast.Tuple):
+        if type(node.selector.body) in (ast.List, ast.Tuple, ast.Dict):
             node.selector.body = ast.Call(func=ast.Attribute(value=ast.Name(id='awkward1'),
-                                                             attr='Table'),
-                                          args=node.selector.body.elts)
-        elif type(node.selector.body) is ast.Dict:
-            node.selector.body = ast.Call(func=ast.Attribute(value=ast.Name(id='awkward1'),
-                                                             attr='Table'),
+                                                             attr='zip'),
                                           args=[node.selector.body])
         call_node = ast.Call(func=node.selector, args=[node.source])
         node.rep = self.get_rep(call_node)
