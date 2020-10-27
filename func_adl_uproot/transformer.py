@@ -269,7 +269,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
 
             node.rep = ('(lambda input_files: '
                         + 'uproot.lazyarrays(input_files, '
-                        + tree_name_rep
+                        + 'logging.getLogger(__name__).info('
+                        + tree_name_rep + ') or tree_name_rep'
                         + '))(' + source_rep + ')')
         else:
             func_rep = self.get_rep(node.func)
