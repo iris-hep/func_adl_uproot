@@ -139,7 +139,9 @@ def test_call():
     assert_modified_source("EventDataset('filename', 'treename')",
                            '(lambda input_files:'
                            + ' uproot.lazyarrays(input_files,'
-                           + " tree_name if tree_name is not None else 'treename'))"
+                           + " logging.getLogger(__name__).info('Using treename=' + repr("
+                           + "(tree_name if tree_name is not None else 'treename')))"
+                           + " or (tree_name if tree_name is not None else 'treename')))"
                            + "(input_filenames if input_filenames is not None else ['filename'])")
 
 

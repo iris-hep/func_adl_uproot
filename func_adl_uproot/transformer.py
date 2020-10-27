@@ -260,14 +260,14 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                                        + "key_array[key_array[:, 1] == 'TTree'][:, 0])("
                                        + 'awkward.Table(uproot.open(input_files[0]).classnames())'
                                        + '.unzip()[0])[0]')
-            tree_name_rep = (tree_name_argument_name + ' '
+            tree_name_rep = ('(' + tree_name_argument_name + ' '
                              + 'if ' + tree_name_argument_name + ' is not None '
-                             + 'else ' + local_tree_name_rep)
+                             + 'else ' + local_tree_name_rep + ')')
 
             node.rep = ('(lambda input_files: '
                         + 'uproot.lazyarrays(input_files, '
-                        + 'logging.getLogger(__name__).info('
-                        + tree_name_rep + ') or tree_name_rep'
+                        + "logging.getLogger(__name__).info('Using treename=' + repr("
+                        + tree_name_rep + ')) or ' + tree_name_rep
                         + '))(' + source_rep + ')')
         else:
             func_rep = self.get_rep(node.func)
