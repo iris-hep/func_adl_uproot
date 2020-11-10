@@ -32,3 +32,10 @@ def test_ast_executor_selectmany_vector_branch():
                      + ' lambda row: row.int_vector_branch)')
     python_ast = qastle.insert_linq_nodes(ast.parse(python_source))
     assert ast_executor(python_ast).tolist() == [-1, 2, 3, 13]
+
+
+def test_ast_executor_selectmany_vector_branch_dictionary():
+    python_source = ("SelectMany(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + " lambda row: {'int_vector_branch': row.int_vector_branch})")
+    python_ast = qastle.insert_linq_nodes(ast.parse(python_source))
+    assert ast_executor(python_ast)['int_vector_branch'].tolist() == [-1, 2, 3, 13]
