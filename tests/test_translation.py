@@ -28,14 +28,6 @@ def assert_modified_source(initial_source, final_source):
     assert rep == final_source
 
 
-def assert_identical_sources_after_translation(source_1, source_2):
-    python_ast_1 = qastle.insert_linq_nodes(ast.parse(source_1))
-    python_ast_2 = qastle.insert_linq_nodes(ast.parse(source_2))
-    rep_1 = python_ast_to_python_source(python_ast_1)
-    rep_2 = python_ast_to_python_source(python_ast_2)
-    assert rep_1 == rep_2
-
-
 def test_literals():
     assert_identical_literal('')
     assert_identical_literal('a')
@@ -150,8 +142,9 @@ def test_select():
 
 
 def test_selectmany():
-    assert_identical_sources_after_translation('SelectMany(uproot, lambda row: row)',
-                                               '(lambda row: row)(uproot).flatten()')
+    assert_modified_source('SelectMany(uproot, lambda row: row)',
+                           "(lambda row: (row.flatten if hasattr(row, 'flatten') "
+                             + "else row['flatten'])())(uproot)")
 
 
 def test_where():
