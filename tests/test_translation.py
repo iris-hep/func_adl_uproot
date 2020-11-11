@@ -144,7 +144,7 @@ def test_select():
 def test_selectmany():
     assert_modified_source('SelectMany(uproot, lambda row: row)',
                            "(lambda row: (row.flatten if hasattr(row, 'flatten') "
-                             + "else row['flatten'])())(uproot)")
+                           + "else row['flatten'])())(uproot)")
 
 
 def test_where():
