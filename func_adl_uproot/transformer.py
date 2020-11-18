@@ -289,17 +289,35 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             node.selector.body = ast.Call(func=ast.Attribute(value=ast.Name(id='awkward'),
                                                              attr='Table'),
                                           args=node.selector.body.elts)
-        if type(node.selector.body) is ast.Dict:
+        elif type(node.selector.body) is ast.Dict:
             node.selector.body = ast.Call(func=ast.Attribute(value=ast.Name(id='awkward'),
                                                              attr='Table'),
                                           args=[node.selector.body])
-        call_node = self.visit(ast.Call(func=node.selector, args=[node.source]))
+        call_node = ast.Call(func=node.selector, args=[node.source])
         node.rep = self.get_rep(call_node)
         return node
 
     def visit_SelectMany(self, node):
-        node = self.visit_Select(node)
-        call_node = self.visit(ast.Call(func=ast.Attribute(value=node, attr='flatten'), args=[]))
+        if type(node.selector) is not ast.Lambda:
+            raise TypeError('Argument to SelectMany() must be a lambda function, found '
+                            + node.selector)
+        if len(node.selector.args.args) != 1:
+            raise TypeError('Lambda function in SelectMany() must have exactly one argument, '
+                            'found ' + len(node.selector.args.args))
+        if type(node.selector.body) in (ast.List, ast.Tuple):
+            node.selector.body.elts = [ast.Call(func=ast.Attribute(value=element,
+                                                                   attr='flatten'),
+                                                args=[]) for element in node.selector.body.elts]
+        elif type(node.selector.body) is ast.Dict:
+            node.selector.body.values = [ast.Call(func=ast.Attribute(value=dict_value,
+                                                                     attr='flatten'),
+                                                  args=[])
+                                         for dict_value in node.selector.body.values]
+        else:
+            node.selector.body = ast.Call(func=ast.Attribute(value=node.selector.body,
+                                                             attr='flatten'),
+                                          args=[])
+        call_node = self.visit_Select(node)
         node.rep = self.get_rep(call_node)
         return node
 
