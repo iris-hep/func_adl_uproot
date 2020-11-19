@@ -54,6 +54,7 @@ def test_builtins():
     assert_identical_source('len')
     assert_identical_source('max')
     assert_identical_source('min')
+    assert_identical_source('sum')
 
 
 def test_globals():
