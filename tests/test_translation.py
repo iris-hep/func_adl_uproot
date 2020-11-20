@@ -121,8 +121,8 @@ def test_subscripts():
                            ('(uproot[uproot.columns[1:4:2]] if isinstance(uproot, awkward.Table)'
                             + ' and uproot.istuple else uproot[1:4:2])'))
     assert_modified_source('uproot[:, :]',
-                           ('(uproot[uproot.columns[:, :]] if isinstance(uproot, awkward.Table)'
-                            + ' and uproot.istuple else uproot[:, :])'))
+                           ('(uproot[uproot.columns[(:, :)]] if isinstance(uproot, awkward.Table)'
+                            + ' and uproot.istuple else uproot[(:, :)])'))
 
 
 def test_attribute():
