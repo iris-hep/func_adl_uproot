@@ -243,7 +243,6 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             if len(node.args) > 2:
                 raise TypeError('EventDataset() should have no more than two arguments, found '
                                 + str(len(node.args)))
-
             if len(node.args) >= 1:
                 if hasattr(node.args[0], 'elts'):
                     urls = node.args[0].elts
@@ -255,7 +254,6 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                               + 'else ' + repr(paths))
             else:
                 source_rep = input_filenames_argument_name
-
             if len(node.args) >= 2:
                 local_tree_name_rep = self.get_rep(node.args[1])
             else:
@@ -266,7 +264,6 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             tree_name_rep = ('(' + tree_name_argument_name + ' '
                              + 'if ' + tree_name_argument_name + ' is not None '
                              + 'else ' + local_tree_name_rep + ')')
-
             node.rep = ('(lambda input_files: '
                         + 'uproot.lazyarrays(input_files, '
                         + "logging.getLogger(__name__).info('Using treename=' + repr("
@@ -328,14 +325,15 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if len(node.predicate.args.args) != 1:
             raise TypeError('Lambda function in Where() must have exactly one argument, found '
                             + len(node.predicate.args.args))
-
         if sys.version_info[0] < 3:
             subscriptable = node.predicate.args.args[0].id
         else:
             subscriptable = node.predicate.args.args[0].arg
-
-        node.predicate.body = ast.Subscript(value=ast.Name(id=subscriptable),
-                                            slice=ast.Index(node.predicate.body))
+        if sys.version_info[0] < 3 or (sys.version_info[0] == 3 and sys.version_info[1] < 9):
+            slice_node = ast.Index(node.predicate.body)
+        else:
+            slice_node = node.predicate.body
+        node.predicate.body = ast.Subscript(value=ast.Name(id=subscriptable), slice=slice_node)
         call_node = self.visit(ast.Call(func=node.predicate, args=[node.source]))
         node.rep = self.get_rep(call_node)
         return node
