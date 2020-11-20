@@ -108,11 +108,21 @@ def test_conditional():
 
 
 def test_subscripts():
-    assert_identical_source('uproot[0]')
-    assert_identical_source("uproot['a']")
-    assert_identical_source('uproot[:]')
-    assert_identical_source('uproot[1:4:2]')
-    assert_identical_source('uproot[:, :]')
+    assert_modified_source('uproot[0]',
+                           ('(uproot[uproot.columns[0]] if isinstance(uproot, awkward.Table)'
+                            + ' and uproot.istuple else uproot[0])'))
+    assert_modified_source("uproot['a']",
+                           ("(uproot[uproot.columns['a']] if isinstance(uproot, awkward.Table)"
+                            + " and uproot.istuple else uproot['a'])"))
+    assert_modified_source('uproot[:]',
+                           ('(uproot[uproot.columns[:]] if isinstance(uproot, awkward.Table)'
+                            + ' and uproot.istuple else uproot[:])'))
+    assert_modified_source('uproot[1:4:2]',
+                           ('(uproot[uproot.columns[1:4:2]] if isinstance(uproot, awkward.Table)'
+                            + ' and uproot.istuple else uproot[1:4:2])'))
+    assert_modified_source('uproot[:, :]',
+                           ('(uproot[uproot.columns[:, :]] if isinstance(uproot, awkward.Table)'
+                            + ' and uproot.istuple else uproot[:, :])'))
 
 
 def test_attribute():
@@ -149,4 +159,7 @@ def test_selectmany():
 
 
 def test_where():
-    assert_modified_source('Where(uproot, lambda row: True)', '(lambda row: row[True])(uproot)')
+    assert_modified_source('Where(uproot, lambda row: True)',
+                           ('(lambda row: (row[row.columns[True]]'
+                            + ' if isinstance(row, awkward.Table)'
+                            + ' and row.istuple else row[True]))(uproot)'))

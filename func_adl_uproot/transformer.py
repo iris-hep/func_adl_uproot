@@ -201,11 +201,10 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
 
     def visit_Subscript(self, node):
         value_rep = self.get_rep(node.value)
-        if isinstance(node.slice, ast.Tuple):
-            slice_rep = ', '.join([self.get_rep(element) for element in node.slice.elts])
-        else:
-            slice_rep = self.get_rep(node.slice)
-        node.rep = value_rep + '[' + slice_rep + ']'
+        slice_rep = self.get_rep(node.slice)
+        node.rep = ('(' + value_rep + '[' + value_rep + '.columns[' + slice_rep + ']]'
+                    + ' if isinstance(' + value_rep + ', awkward.Table)'
+                    + ' and ' + value_rep + '.istuple else ' + value_rep + '[' + slice_rep + '])')
         return node
 
     def visit_Attribute(self, node):
