@@ -57,6 +57,16 @@ def test_ast_executor_select_of_select_scalar_branch_tuple():
     assert ast_executor(python_ast)['1'].tolist() == [0, -2]
 
 
+def test_ast_executor_select_of_select_scalar_branch_dict():
+    python_source = ("Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+                     + " lambda row: {'ints': row.int_branch,"
+                     + " 'longs': row.long_branch})"
+                     + '.Select(lambda row: {row.ints, row.longs})')
+    python_ast = qastle.insert_linq_nodes(ast.parse(python_source))
+    assert ast_executor(python_ast)['0'].tolist() == [0, -1]
+    assert ast_executor(python_ast)['1'].tolist() == [0, -2]
+
+
 def test_ast_executor_where_scalar_branch():
     python_source = ("Where(EventDataset('tests/scalars_tree_file.root', 'tree'),"
                      + ' lambda row: row.int_branch < 0)'
@@ -102,3 +112,10 @@ def test_ast_executor_selectmany_vector_branch_dict():
     python_ast = qastle.insert_linq_nodes(ast.parse(python_source))
     assert ast_executor(python_ast)['int_vector_branch'].tolist() == [-1, 2, 3, 13]
     assert np.allclose(ast_executor(python_ast)['float_vector_branch'], [-7.7, 8.8, 9.9, 15.15])
+
+
+def test_ast_executor_where_vector_branch():
+    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + "lambda row: row.int_vector_branch.Where(lambda int_value: int_value > 0))")
+    python_ast = qastle.insert_linq_nodes(ast.parse(python_source))
+    assert ast_executor(python_ast).tolist() == [[], [2, 3], [13]]
