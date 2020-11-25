@@ -5,8 +5,8 @@ if sys.version_info[0] < 3:
 else:
     from urllib.parse import urlparse
 
-import awkward
-import uproot
+import awkward0 as awkward
+import uproot3 as uproot
 
 input_filenames_argument_name = 'input_filenames'
 tree_name_argument_name = 'tree_name'
