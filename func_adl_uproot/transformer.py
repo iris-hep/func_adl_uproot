@@ -247,12 +247,15 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                     urls = node.args[0].elts
                 else:
                     urls = [node.args[0]]
-                paths = [''.join(urlparse(ast.literal_eval(url))[1:]) for url in urls]
+                paths = [''.join(urlparse(ast.literal_eval(url))[1:])
+                         for url in urls if ast.literal_eval(url) is not None]
                 source_rep = (input_filenames_argument_name + ' '
                               + 'if ' + input_filenames_argument_name + ' is not None '
                               + 'else ' + repr(paths))
             else:
                 source_rep = input_filenames_argument_name
+            source_rep = ('(lambda source: [source] if isinstance(source, str) else source)('
+                          + source_rep + ')')
             if len(node.args) >= 2:
                 local_tree_name_rep = self.get_rep(node.args[1])
             else:
