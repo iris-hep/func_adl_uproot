@@ -2,7 +2,7 @@ import ast
 
 import qastle
 
-from func_adl_uproot import python_ast_to_python_source
+from func_adl_uproot import python_ast_to_python_source, generate_function
 
 
 def assert_identical_source(python_source):
@@ -152,3 +152,47 @@ def test_selectmany():
 
 def test_where():
     assert_modified_source('Where(uproot4, lambda row: True)', '(lambda row: row[True])(uproot4)')
+
+
+def test_generate_function_string():
+    python_source = "EventDataset()"
+    python_ast = ast.parse(python_source)
+    function = generate_function(python_ast)
+    assert function('tests/scalars_tree_file.root', 'tree').fields == ['int_branch',
+                                                                       'long_branch',
+                                                                       'float_branch',
+                                                                       'double_branch',
+                                                                       'bool_branch']
+
+
+def test_generate_function_list():
+    python_source = "EventDataset()"
+    python_ast = ast.parse(python_source)
+    function = generate_function(python_ast)
+    assert function(['tests/scalars_tree_file.root'], 'tree').fields == ['int_branch',
+                                                                         'long_branch',
+                                                                         'float_branch',
+                                                                         'double_branch',
+                                                                         'bool_branch']
+
+
+def test_generate_function_override_file():
+    python_source = "EventDataset(None)"
+    python_ast = ast.parse(python_source)
+    function = generate_function(python_ast)
+    assert function(['tests/scalars_tree_file.root'], 'tree').fields == ['int_branch',
+                                                                         'long_branch',
+                                                                         'float_branch',
+                                                                         'double_branch',
+                                                                         'bool_branch']
+
+
+def test_generate_function_override_file_and_tree():
+    python_source = "EventDataset(None, None)"
+    python_ast = ast.parse(python_source)
+    function = generate_function(python_ast)
+    assert function(['tests/scalars_tree_file.root'], 'tree').fields == ['int_branch',
+                                                                         'long_branch',
+                                                                         'float_branch',
+                                                                         'double_branch',
+                                                                         'bool_branch']
