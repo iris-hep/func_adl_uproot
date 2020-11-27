@@ -196,7 +196,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def visit_ExtSlice(self, node):
-        node.rep = '(' + ', '.join(self.get_rep(dimension) for dimension in node.dims) + ')'
+        node.rep = self.get_rep(ast.Tuple(elts=node.dims))
         return node
 
     def visit_Subscript(self, node):
