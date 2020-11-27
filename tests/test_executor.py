@@ -7,6 +7,30 @@ import qastle
 from func_adl_uproot import ast_executor
 
 
+def test_ast_executor():
+    python_source = "EventDataset('tests/scalars_tree_file.root', 'tree')"
+    python_ast = qastle.insert_linq_nodes(ast.parse(python_source))
+    ast_executor(python_ast)
+
+
+def test_ast_executor_without_treename():
+    python_source = "EventDataset('tests/scalars_tree_file.root')"
+    python_ast = qastle.insert_linq_nodes(ast.parse(python_source))
+    ast_executor(python_ast)
+
+
+def test_ast_executor_list():
+    python_source = "EventDataset(['tests/scalars_tree_file.root'], 'tree')"
+    python_ast = qastle.insert_linq_nodes(ast.parse(python_source))
+    ast_executor(python_ast)
+
+
+def test_ast_executor_list_without_treename():
+    python_source = "EventDataset(['tests/scalars_tree_file.root'])"
+    python_ast = qastle.insert_linq_nodes(ast.parse(python_source))
+    ast_executor(python_ast)
+
+
 def test_ast_executor_select_scalar_branch():
     python_source = ("Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
                      + ' lambda row: row.int_branch)')
