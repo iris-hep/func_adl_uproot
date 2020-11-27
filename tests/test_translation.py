@@ -139,14 +139,6 @@ def test_call():
     assert_identical_source('uproot4()')
     assert_identical_source('uproot4(1)')
     assert_identical_source('uproot4(1, 2)')
-    assert_modified_source("EventDataset('filename', 'treename')",
-                           '(lambda input_files, tree_name_to_use:'
-                           + " (logging.getLogger(__name__).info('Using treename='"
-                           + " + repr(tree_name_to_use)),"
-                           + ' uproot4.lazy({input_file: tree_name_to_use'
-                           + ' for input_file in input_files}))[1])'
-                           + "(input_filenames if input_filenames is not None else ['filename'],"
-                           + " tree_name if tree_name is not None else 'treename')")
 
 
 def test_select():
