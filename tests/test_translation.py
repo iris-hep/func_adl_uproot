@@ -147,12 +147,8 @@ def test_select():
 
 def test_selectmany():
     assert_modified_source('SelectMany(uproot4, lambda row: row)',
-                           "(lambda row: (awkward1.flatten if hasattr(awkward1, 'flatten')"
-                           + " else awkward1['flatten'])(row))(uproot4)")
+                           'awkward1.flatten((lambda row: row)(uproot4))')
 
 
 def test_where():
-    assert_modified_source('Where(uproot4, lambda row: True)',
-                           ('(lambda row: (row[row.fields[True]]'
-                            + ' if isinstance(row, awkward1.Array)'
-                            + ' else row[True]))(uproot4)'))
+    assert_modified_source('Where(uproot4, lambda row: True)', '(lambda row: row[True])(uproot4)')

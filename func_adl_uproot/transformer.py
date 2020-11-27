@@ -202,16 +202,22 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def visit_Subscript(self, node):
         value_rep = self.get_rep(node.value)
         slice_rep = self.get_rep(node.slice)
-        node.rep = ('(' + value_rep + '[' + value_rep + '.fields[' + slice_rep + ']]'
-                    + ' if isinstance(' + value_rep + ', awkward1.Array)'
-                    + ' else ' + value_rep + '[' + slice_rep + '])')
+        if hasattr(node, 'short_circuit') and node.short_circuit is True:
+            node.rep = value_rep + '[' + slice_rep + ']'
+        else:
+            node.rep = ('(' + value_rep + '[' + value_rep + '.fields[' + slice_rep + ']]'
+                        + ' if isinstance(' + value_rep + ', awkward1.Array)'
+                        + ' else ' + value_rep + '[' + slice_rep + '])')
         return node
 
     def visit_Attribute(self, node):
         value_rep = self.get_rep(node.value)
-        node.rep = ('(' + value_rep + '.' + node.attr
-                    + ' if hasattr(' + value_rep + ", '" + node.attr
-                    + "') else " + value_rep + "['" + node.attr + "'])")
+        if hasattr(node, 'short_circuit') and node.short_circuit is True:
+            node.rep = value_rep + '.' + node.attr
+        else:
+            node.rep = ('(' + value_rep + '.' + node.attr
+                        + ' if hasattr(' + value_rep + ", '" + node.attr
+                        + "') else " + value_rep + "['" + node.attr + "'])")
         return node
 
     def visit_Lambda(self, node):
@@ -286,9 +292,10 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             raise TypeError('Lambda function in Select() must have exactly one argument, found '
                             + len(node.selector.args.args))
         if type(node.selector.body) in (ast.List, ast.Tuple, ast.Dict):
-            node.selector.body = ast.Call(func=ast.Attribute(value=ast.Name(id='awkward1'),
-                                                             attr='zip'),
-                                          args=[node.selector.body])
+            attribute_node = ast.Attribute(value=ast.Name(id='awkward1'),
+                                           attr='zip',
+                                           short_circuit=True)
+            node.selector.body = ast.Call(func=attribute_node, args=[node.selector.body])
         call_node = ast.Call(func=node.selector, args=[node.source])
         node.rep = self.get_rep(call_node)
         return node
@@ -322,7 +329,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             slice_node = ast.Index(node.predicate.body)
         else:
             slice_node = node.predicate.body
-        node.predicate.body = ast.Subscript(value=ast.Name(id=subscriptable), slice=slice_node)
+        node.predicate.body = ast.Subscript(value=ast.Name(id=subscriptable),
+                                            slice=slice_node,
+                                            short_circuit=True)
         call_node = self.visit(ast.Call(func=node.predicate, args=[node.source]))
         node.rep = self.get_rep(call_node)
         return node
