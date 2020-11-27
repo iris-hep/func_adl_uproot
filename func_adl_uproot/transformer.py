@@ -267,7 +267,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                                        + 'np.atleast_2d((lambda classnames:'
                                        + ' np.hstack([list(classnames.keys()),'
                                        + ' list(classnames.values())]))'
-                                       + '(uproot4.open(input_files[0]).classnames())'
+                                       + '(uproot4.open(' + source_rep + '[0]).classnames())'
                                        + '))[0]')
             tree_name_rep = (tree_name_argument_name + ' '
                              + 'if ' + tree_name_argument_name + ' is not None '
