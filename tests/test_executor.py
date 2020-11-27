@@ -116,7 +116,7 @@ def test_ast_executor_selectmany_vector_branch_list():
                      + ' lambda row: [row.int_vector_branch, row.float_vector_branch])')
     python_ast = qastle.insert_linq_nodes(ast.parse(python_source))
     assert ast_executor(python_ast)['0'].tolist() == [-1, 2, 3, 13]
-    assert np.allclose(ast_executor(python_ast)['1'], [-7.7, 8.8, 9.9, 15.15])
+    assert np.allclose(ast_executor(python_ast)['1'].tolist(), [-7.7, 8.8, 9.9, 15.15])
 
 
 def test_ast_executor_selectmany_vector_branch_tuple():
@@ -124,7 +124,7 @@ def test_ast_executor_selectmany_vector_branch_tuple():
                      + ' lambda row: (row.int_vector_branch, row.float_vector_branch))')
     python_ast = qastle.insert_linq_nodes(ast.parse(python_source))
     assert ast_executor(python_ast)['0'].tolist() == [-1, 2, 3, 13]
-    assert np.allclose(ast_executor(python_ast)['1'], [-7.7, 8.8, 9.9, 15.15])
+    assert np.allclose(ast_executor(python_ast)['1'].tolist(), [-7.7, 8.8, 9.9, 15.15])
 
 
 def test_ast_executor_selectmany_vector_branch_dict():
@@ -133,7 +133,7 @@ def test_ast_executor_selectmany_vector_branch_dict():
                      + " 'floats': row.float_vector_branch})")
     python_ast = qastle.insert_linq_nodes(ast.parse(python_source))
     assert ast_executor(python_ast)['ints'].tolist() == [-1, 2, 3, 13]
-    assert np.allclose(ast_executor(python_ast)['floats'], [-7.7, 8.8, 9.9, 15.15])
+    assert np.allclose(ast_executor(python_ast)['floats'].tolist(), [-7.7, 8.8, 9.9, 15.15])
 
 
 def test_ast_executor_where_vector_branch():
