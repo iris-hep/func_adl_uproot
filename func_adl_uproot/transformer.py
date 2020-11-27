@@ -328,8 +328,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                                                              attr='flatten',
                                                              short_circuit=True),
                                           args=[])
-        call_node = self.visit_Select(node)
-        node.rep = self.get_rep(call_node)
+        self.visit_Select(node)
         return node
 
     def visit_Where(self, node):
