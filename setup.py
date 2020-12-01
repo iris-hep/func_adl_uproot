@@ -12,10 +12,10 @@ setuptools.setup(name='func_adl_uproot',
                  packages=setuptools.find_packages(exclude=['tests']),
                  python_requires=('>=2.7, '
                                   '!=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, <3.10'),
-                 install_requires=['awkward0>=0.12.17',
+                 install_requires=['awkward0',
                                    'numpy',
                                    'qastle>=0.7',
-                                   'uproot3>=3.6'],
+                                   'uproot3>=3.14.1'],
                  author='Mason Proffitt',
                  author_email='masonlp@uw.edu',
                  url='https://github.com/iris-hep/func_adl_uproot')
