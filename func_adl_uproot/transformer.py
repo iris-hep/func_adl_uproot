@@ -268,16 +268,16 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             else:
                 local_tree_name_rep = ('(lambda key_array: '
                                        + "key_array[key_array[:, 1] == 'TTree'][:, 0])("
-                                       + 'awkward.Table(uproot.open(input_files[0]).classnames())'
-                                       + '.unzip()[0])[0]')
-            tree_name_rep = ('(' + tree_name_argument_name + ' '
-                             + 'if ' + tree_name_argument_name + ' is not None '
-                             + 'else ' + local_tree_name_rep + ')')
-            node.rep = ('(lambda input_files: '
-                        + 'uproot.lazyarrays(input_files, '
-                        + "logging.getLogger(__name__).info('Using treename=' + repr("
-                        + tree_name_rep + ')) or ' + tree_name_rep
-                        + '))(' + source_rep + ')')
+                                       + 'awkward.Table(uproot.open(' + source_rep + '[0])'
+                                       + '.classnames()).unzip()[0])[0]')
+            tree_name_rep = (tree_name_argument_name
+                             + ' if ' + tree_name_argument_name + ' is not None'
+                             + ' else ' + local_tree_name_rep)
+            node.rep = ('(lambda input_files, tree_name_to_use: '
+                        + "logging.getLogger(__name__).info('Using treename='"
+                        + ' + repr(tree_name_to_use))'
+                        + ' or uproot.lazyarrays(input_files, tree_name_to_use))'
+                        + '(' + source_rep + ', ' + tree_name_rep + ')')
         else:
             func_rep = self.get_rep(node.func)
             args_rep = ', '.join(self.get_rep(arg) for arg in node.args)
