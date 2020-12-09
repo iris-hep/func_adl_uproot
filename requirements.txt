@@ -1,4 +1,4 @@
 awkward>=1
 numpy
-qastle>=0.7
+qastle>=0.10
 uproot>=4
