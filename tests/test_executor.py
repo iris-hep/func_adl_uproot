@@ -2,6 +2,8 @@ import ast
 
 import numpy as np
 
+import awkward as ak
+
 from func_adl_uproot import ast_executor
 
 
@@ -159,27 +161,27 @@ def test_ast_executor_where_vector_branch():
 
 def test_ast_executor_where_vector_branch_list():
     python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
-                     + 'lambda row: [row.int_vector_branch, row.float_vector_branch]'
+                     + 'lambda row: Zip([row.int_vector_branch, row.float_vector_branch])'
                      + '.Where(lambda elements: elements[0] > 0))')
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast)['0'].tolist() == [[], [2, 3], [13]]
-    assert ast_executor(python_ast)['1'].tolist() == [[], [8.8, 9.9], [15.15]]
+    assert ak.max(abs(ast_executor(python_ast)['1'] - ak.Array([[], [8.8, 9.9], [15.15]]))) < 1e-6
 
 
 def test_ast_executor_where_vector_branch_tuple():
     python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
-                     + 'lambda row: (row.int_vector_branch, row.float_vector_branch)'
+                     + 'lambda row: Zip((row.int_vector_branch, row.float_vector_branch))'
                      + '.Where(lambda elements: elements[0] > 0))')
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast)['0'].tolist() == [[], [2, 3], [13]]
-    assert ast_executor(python_ast)['1'].tolist() == [[], [8.8, 9.9], [15.15]]
+    assert ak.max(abs(ast_executor(python_ast)['1'] - ak.Array([[], [8.8, 9.9], [15.15]]))) < 1e-6
 
 
 def test_ast_executor_where_vector_branch_dict():
     python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
-                     + "lambda row: {'ints': row.int_vector_branch,"
-                     + " 'floats': row.float_vector_branch}"
+                     + "lambda row: Zip({'ints': row.int_vector_branch,"
+                     + " 'floats': row.float_vector_branch})"
                      + '.Where(lambda elements: elements.ints > 0))')
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast)['ints'].tolist() == [[], [2, 3], [13]]
-    assert ast_executor(python_ast)['floats'].tolist() == [[], [8.8, 9.9], [15.15]]
+    assert ak.max(abs(ast_executor(python_ast)['floats'] - ak.Array([[], [8.8, 9.9], [15.15]]))) < 1e-6

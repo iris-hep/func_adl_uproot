@@ -335,3 +335,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         call_node = ast.Call(func=node.predicate, args=[node.source])
         node.rep = self.get_rep(call_node)
         return node
+
+    def visit_Zip(self, node):
+        attribute_node = ast.Attribute(value=ast.Name(id='ak'),
+                                       attr='zip',
+                                       short_circuit=True)
+        call_node = ast.Call(func=attribute_node, args=[node.source])
+        node.rep = self.get_rep(call_node)
+        return node

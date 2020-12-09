@@ -154,6 +154,10 @@ def test_where():
     assert_modified_source('Where(uproot, lambda row: True)', '(lambda row: row[True])(uproot)')
 
 
+def test_zip():
+    assert_modified_source('Zip(uproot)', 'ak.zip(uproot)')
+
+
 def test_generate_function_string():
     python_source = "EventDataset()"
     python_ast = ast.parse(python_source)
