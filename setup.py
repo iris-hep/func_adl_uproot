@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(name='func_adl_uproot',
-                 version='0.13',
+                 version='0.14',
                  description=('Functional Analysis Description Language'
                               + ' uproot backend for accessing flat ROOT ntuples'),
                  long_description=long_description,
