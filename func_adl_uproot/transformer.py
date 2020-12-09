@@ -5,8 +5,8 @@ if sys.version_info[0] < 3:
 else:
     from urllib.parse import urlparse
 
-import awkward1
-import uproot4
+import awkward as ak
+import uproot
 
 input_filenames_argument_name = 'input_filenames'
 tree_name_argument_name = 'tree_name'
@@ -206,7 +206,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             node.rep = value_rep + '[' + slice_rep + ']'
         else:
             node.rep = ('(' + value_rep + '[' + value_rep + '.fields[' + slice_rep + ']]'
-                        + ' if isinstance(' + value_rep + ', awkward1.Array)'
+                        + ' if isinstance(' + value_rep + ', ak.Array)'
                         + ' else ' + value_rep + '[' + slice_rep + '])')
         return node
 
@@ -270,7 +270,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                                        + 'np.atleast_2d((lambda classnames:'
                                        + ' np.hstack([list(classnames.keys()),'
                                        + ' list(classnames.values())]))'
-                                       + '(uproot4.open(' + source_rep + '[0]).classnames())'
+                                       + '(uproot.open(' + source_rep + '[0]).classnames())'
                                        + '))[0]')
             tree_name_rep = (tree_name_argument_name + ' '
                              + 'if ' + tree_name_argument_name + ' is not None '
@@ -278,7 +278,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             node.rep = ('(lambda input_files, tree_name_to_use: '
                         + "(logging.getLogger(__name__).info('Using treename='"
                         + ' + repr(tree_name_to_use)),'
-                        + ' uproot4.lazy({input_file: tree_name_to_use'
+                        + ' uproot.lazy({input_file: tree_name_to_use'
                         + ' for input_file in input_files}))[1])'
                         + '(' + source_rep + ', ' + tree_name_rep + ')')
         else:
@@ -295,7 +295,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             raise TypeError('Lambda function in Select() must have exactly one argument, found '
                             + len(node.selector.args.args))
         if type(node.selector.body) in (ast.List, ast.Tuple, ast.Dict):
-            attribute_node = ast.Attribute(value=ast.Name(id='awkward1'),
+            attribute_node = ast.Attribute(value=ast.Name(id='ak'),
                                            attr='zip',
                                            short_circuit=True)
             node.selector.body = ast.Call(func=attribute_node, args=[node.selector.body])
@@ -311,7 +311,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             raise TypeError('Lambda function in SelectMany() must have exactly one argument, '
                             'found ' + len(node.selector.args.args))
         self.visit_Select(node)
-        node.rep = 'awkward1.flatten(' + node.rep + ')'
+        node.rep = 'ak.flatten(' + node.rep + ')'
         return node
 
     def visit_Where(self, node):

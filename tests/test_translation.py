@@ -58,8 +58,8 @@ def test_builtins():
 
 
 def test_globals():
-    assert_identical_source('uproot4')
-    assert_identical_source('awkward1')
+    assert_identical_source('uproot')
+    assert_identical_source('ak')
 
 
 def test_unary_ops():
@@ -108,25 +108,25 @@ def test_conditional():
 
 
 def test_subscripts():
-    assert_modified_source('uproot4[0]',
-                           ('(uproot4[uproot4.fields[0]]'
-                            + ' if isinstance(uproot4, awkward1.Array) else uproot4[0])'))
-    assert_modified_source("uproot4['a']",
-                           ("(uproot4[uproot4.fields['a']]"
-                            + " if isinstance(uproot4, awkward1.Array) else uproot4['a'])"))
-    assert_modified_source('uproot4[:]',
-                           ('(uproot4[uproot4.fields[:]]'
-                            + ' if isinstance(uproot4, awkward1.Array) else uproot4[:])'))
-    assert_modified_source('uproot4[1:4:2]',
-                           ('(uproot4[uproot4.fields[1:4:2]]'
-                            + ' if isinstance(uproot4, awkward1.Array) else uproot4[1:4:2])'))
-    assert_modified_source('uproot4[:, :]',
-                           ('(uproot4[uproot4.fields[(:, :)]]'
-                            + ' if isinstance(uproot4, awkward1.Array) else uproot4[(:, :)])'))
+    assert_modified_source('uproot[0]',
+                           ('(uproot[uproot.fields[0]]'
+                            + ' if isinstance(uproot, ak.Array) else uproot[0])'))
+    assert_modified_source("uproot['a']",
+                           ("(uproot[uproot.fields['a']]"
+                            + " if isinstance(uproot, ak.Array) else uproot['a'])"))
+    assert_modified_source('uproot[:]',
+                           ('(uproot[uproot.fields[:]]'
+                            + ' if isinstance(uproot, ak.Array) else uproot[:])'))
+    assert_modified_source('uproot[1:4:2]',
+                           ('(uproot[uproot.fields[1:4:2]]'
+                            + ' if isinstance(uproot, ak.Array) else uproot[1:4:2])'))
+    assert_modified_source('uproot[:, :]',
+                           ('(uproot[uproot.fields[(:, :)]]'
+                            + ' if isinstance(uproot, ak.Array) else uproot[(:, :)])'))
 
 
 def test_attribute():
-    assert_modified_source('uproot4.a', "(uproot4.a if hasattr(uproot4, 'a') else uproot4['a'])")
+    assert_modified_source('uproot.a', "(uproot.a if hasattr(uproot, 'a') else uproot['a'])")
 
 
 def test_lambda():
@@ -136,22 +136,22 @@ def test_lambda():
 
 
 def test_call():
-    assert_identical_source('uproot4()')
-    assert_identical_source('uproot4(1)')
-    assert_identical_source('uproot4(1, 2)')
+    assert_identical_source('uproot()')
+    assert_identical_source('uproot(1)')
+    assert_identical_source('uproot(1, 2)')
 
 
 def test_select():
-    assert_modified_source('Select(uproot4, lambda row: row)', '(lambda row: row)(uproot4)')
+    assert_modified_source('Select(uproot, lambda row: row)', '(lambda row: row)(uproot)')
 
 
 def test_selectmany():
-    assert_modified_source('SelectMany(uproot4, lambda row: row)',
-                           'awkward1.flatten((lambda row: row)(uproot4))')
+    assert_modified_source('SelectMany(uproot, lambda row: row)',
+                           'ak.flatten((lambda row: row)(uproot))')
 
 
 def test_where():
-    assert_modified_source('Where(uproot4, lambda row: True)', '(lambda row: row[True])(uproot4)')
+    assert_modified_source('Where(uproot, lambda row: True)', '(lambda row: row[True])(uproot)')
 
 
 def test_generate_function_string():
