@@ -2,7 +2,7 @@ import ast
 
 import qastle
 
-from func_adl_uproot import python_ast_to_python_source
+from func_adl_uproot import python_ast_to_python_source, generate_function
 
 
 def assert_identical_source(python_source):
@@ -59,7 +59,7 @@ def test_builtins():
 
 def test_globals():
     assert_identical_source('uproot')
-    assert_identical_source('awkward')
+    assert_identical_source('ak')
 
 
 def test_unary_ops():
@@ -109,20 +109,20 @@ def test_conditional():
 
 def test_subscripts():
     assert_modified_source('uproot[0]',
-                           ('(uproot[uproot.columns[0]] if isinstance(uproot, awkward.Table)'
-                            + ' and uproot.istuple else uproot[0])'))
+                           ('(uproot[uproot.fields[0]]'
+                            + ' if isinstance(uproot, ak.Array) else uproot[0])'))
     assert_modified_source("uproot['a']",
-                           ("(uproot[uproot.columns['a']] if isinstance(uproot, awkward.Table)"
-                            + " and uproot.istuple else uproot['a'])"))
+                           ("(uproot[uproot.fields['a']]"
+                            + " if isinstance(uproot, ak.Array) else uproot['a'])"))
     assert_modified_source('uproot[:]',
-                           ('(uproot[uproot.columns[:]] if isinstance(uproot, awkward.Table)'
-                            + ' and uproot.istuple else uproot[:])'))
+                           ('(uproot[uproot.fields[:]]'
+                            + ' if isinstance(uproot, ak.Array) else uproot[:])'))
     assert_modified_source('uproot[1:4:2]',
-                           ('(uproot[uproot.columns[1:4:2]] if isinstance(uproot, awkward.Table)'
-                            + ' and uproot.istuple else uproot[1:4:2])'))
+                           ('(uproot[uproot.fields[1:4:2]]'
+                            + ' if isinstance(uproot, ak.Array) else uproot[1:4:2])'))
     assert_modified_source('uproot[:, :]',
-                           ('(uproot[uproot.columns[(:, :)]] if isinstance(uproot, awkward.Table)'
-                            + ' and uproot.istuple else uproot[(:, :)])'))
+                           ('(uproot[uproot.fields[(:, :)]]'
+                            + ' if isinstance(uproot, ak.Array) else uproot[(:, :)])'))
 
 
 def test_attribute():
@@ -139,13 +139,6 @@ def test_call():
     assert_identical_source('uproot()')
     assert_identical_source('uproot(1)')
     assert_identical_source('uproot(1, 2)')
-    assert_modified_source("EventDataset('filename', 'treename')",
-                           '(lambda input_files:'
-                           + ' uproot.lazyarrays(input_files,'
-                           + " logging.getLogger(__name__).info('Using treename=' + repr("
-                           + "(tree_name if tree_name is not None else 'treename')))"
-                           + " or (tree_name if tree_name is not None else 'treename')))"
-                           + "(input_filenames if input_filenames is not None else ['filename'])")
 
 
 def test_select():
@@ -154,12 +147,56 @@ def test_select():
 
 def test_selectmany():
     assert_modified_source('SelectMany(uproot, lambda row: row)',
-                           "(lambda row: (row.flatten if hasattr(row, 'flatten') "
-                           + "else row['flatten'])())(uproot)")
+                           'ak.flatten((lambda row: row)(uproot))')
 
 
 def test_where():
-    assert_modified_source('Where(uproot, lambda row: True)',
-                           ('(lambda row: (row[row.columns[True]]'
-                            + ' if isinstance(row, awkward.Table)'
-                            + ' and row.istuple else row[True]))(uproot)'))
+    assert_modified_source('Where(uproot, lambda row: True)', '(lambda row: row[True])(uproot)')
+
+
+def test_zip():
+    assert_modified_source('Zip(uproot)', 'ak.zip(uproot)')
+
+
+def test_generate_function_string():
+    python_source = "EventDataset()"
+    python_ast = ast.parse(python_source)
+    function = generate_function(python_ast)
+    assert function('tests/scalars_tree_file.root', 'tree').fields == ['int_branch',
+                                                                       'long_branch',
+                                                                       'float_branch',
+                                                                       'double_branch',
+                                                                       'bool_branch']
+
+
+def test_generate_function_list():
+    python_source = "EventDataset()"
+    python_ast = ast.parse(python_source)
+    function = generate_function(python_ast)
+    assert function(['tests/scalars_tree_file.root'], 'tree').fields == ['int_branch',
+                                                                         'long_branch',
+                                                                         'float_branch',
+                                                                         'double_branch',
+                                                                         'bool_branch']
+
+
+def test_generate_function_override_file():
+    python_source = "EventDataset(None)"
+    python_ast = ast.parse(python_source)
+    function = generate_function(python_ast)
+    assert function(['tests/scalars_tree_file.root'], 'tree').fields == ['int_branch',
+                                                                         'long_branch',
+                                                                         'float_branch',
+                                                                         'double_branch',
+                                                                         'bool_branch']
+
+
+def test_generate_function_override_file_and_tree():
+    python_source = "EventDataset(None, None)"
+    python_ast = ast.parse(python_source)
+    function = generate_function(python_ast)
+    assert function(['tests/scalars_tree_file.root'], 'tree').fields == ['int_branch',
+                                                                         'long_branch',
+                                                                         'float_branch',
+                                                                         'double_branch',
+                                                                         'bool_branch']

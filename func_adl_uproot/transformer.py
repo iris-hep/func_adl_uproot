@@ -5,8 +5,8 @@ if sys.version_info[0] < 3:
 else:
     from urllib.parse import urlparse
 
-import awkward0 as awkward
-import uproot3 as uproot
+import awkward as ak
+import uproot
 
 input_filenames_argument_name = 'input_filenames'
 tree_name_argument_name = 'tree_name'
@@ -196,22 +196,28 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def visit_ExtSlice(self, node):
-        node.rep = '(' + ', '.join(self.get_rep(dimension) for dimension in node.dims) + ')'
+        node.rep = self.get_rep(ast.Tuple(elts=node.dims))
         return node
 
     def visit_Subscript(self, node):
         value_rep = self.get_rep(node.value)
         slice_rep = self.get_rep(node.slice)
-        node.rep = ('(' + value_rep + '[' + value_rep + '.columns[' + slice_rep + ']]'
-                    + ' if isinstance(' + value_rep + ', awkward.Table)'
-                    + ' and ' + value_rep + '.istuple else ' + value_rep + '[' + slice_rep + '])')
+        if hasattr(node, 'short_circuit') and node.short_circuit is True:
+            node.rep = value_rep + '[' + slice_rep + ']'
+        else:
+            node.rep = ('(' + value_rep + '[' + value_rep + '.fields[' + slice_rep + ']]'
+                        + ' if isinstance(' + value_rep + ', ak.Array)'
+                        + ' else ' + value_rep + '[' + slice_rep + '])')
         return node
 
     def visit_Attribute(self, node):
         value_rep = self.get_rep(node.value)
-        node.rep = ('(' + value_rep + '.' + node.attr
-                    + ' if hasattr(' + value_rep + ", '" + node.attr
-                    + "') else " + value_rep + "['" + node.attr + "'])")
+        if hasattr(node, 'short_circuit') and node.short_circuit is True:
+            node.rep = value_rep + '.' + node.attr
+        else:
+            node.rep = ('(' + value_rep + '.' + node.attr
+                        + ' if hasattr(' + value_rep + ", '" + node.attr
+                        + "') else " + value_rep + "['" + node.attr + "'])")
         return node
 
     def visit_Lambda(self, node):
@@ -247,27 +253,34 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                     urls = node.args[0].elts
                 else:
                     urls = [node.args[0]]
-                paths = [''.join(urlparse(ast.literal_eval(url))[1:]) for url in urls]
+                paths = [''.join(urlparse(ast.literal_eval(url))[1:])
+                         for url in urls if ast.literal_eval(url) is not None]
                 source_rep = (input_filenames_argument_name + ' '
                               + 'if ' + input_filenames_argument_name + ' is not None '
                               + 'else ' + repr(paths))
             else:
                 source_rep = input_filenames_argument_name
+            source_rep = ('(lambda source: [source] if isinstance(source, str) else source)('
+                          + source_rep + ')')
             if len(node.args) >= 2:
                 local_tree_name_rep = self.get_rep(node.args[1])
             else:
                 local_tree_name_rep = ('(lambda key_array: '
                                        + "key_array[key_array[:, 1] == 'TTree'][:, 0])("
-                                       + 'awkward.Table(uproot.open(input_files[0]).classnames())'
-                                       + '.unzip()[0])[0]')
-            tree_name_rep = ('(' + tree_name_argument_name + ' '
+                                       + 'np.atleast_2d((lambda classnames:'
+                                       + ' np.hstack([list(classnames.keys()),'
+                                       + ' list(classnames.values())]))'
+                                       + '(uproot.open(' + source_rep + '[0]).classnames())'
+                                       + '))[0]')
+            tree_name_rep = (tree_name_argument_name + ' '
                              + 'if ' + tree_name_argument_name + ' is not None '
-                             + 'else ' + local_tree_name_rep + ')')
-            node.rep = ('(lambda input_files: '
-                        + 'uproot.lazyarrays(input_files, '
-                        + "logging.getLogger(__name__).info('Using treename=' + repr("
-                        + tree_name_rep + ')) or ' + tree_name_rep
-                        + '))(' + source_rep + ')')
+                             + 'else ' + local_tree_name_rep)
+            node.rep = ('(lambda input_files, tree_name_to_use: '
+                        + "(logging.getLogger(__name__).info('Using treename='"
+                        + ' + repr(tree_name_to_use)),'
+                        + ' uproot.lazy({input_file: tree_name_to_use'
+                        + ' for input_file in input_files}))[1])'
+                        + '(' + source_rep + ', ' + tree_name_rep + ')')
         else:
             func_rep = self.get_rep(node.func)
             args_rep = ', '.join(self.get_rep(arg) for arg in node.args)
@@ -281,14 +294,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if len(node.selector.args.args) != 1:
             raise TypeError('Lambda function in Select() must have exactly one argument, found '
                             + len(node.selector.args.args))
-        if type(node.selector.body) in (ast.List, ast.Tuple):
-            node.selector.body = ast.Call(func=ast.Attribute(value=ast.Name(id='awkward'),
-                                                             attr='Table'),
-                                          args=node.selector.body.elts)
-        elif type(node.selector.body) is ast.Dict:
-            node.selector.body = ast.Call(func=ast.Attribute(value=ast.Name(id='awkward'),
-                                                             attr='Table'),
-                                          args=[node.selector.body])
+        if type(node.selector.body) in (ast.List, ast.Tuple, ast.Dict):
+            attribute_node = ast.Attribute(value=ast.Name(id='ak'),
+                                           attr='zip',
+                                           short_circuit=True)
+            node.selector.body = ast.Call(func=attribute_node, args=[node.selector.body])
         call_node = ast.Call(func=node.selector, args=[node.source])
         node.rep = self.get_rep(call_node)
         return node
@@ -300,21 +310,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if len(node.selector.args.args) != 1:
             raise TypeError('Lambda function in SelectMany() must have exactly one argument, '
                             'found ' + len(node.selector.args.args))
-        if type(node.selector.body) in (ast.List, ast.Tuple):
-            node.selector.body.elts = [ast.Call(func=ast.Attribute(value=element,
-                                                                   attr='flatten'),
-                                                args=[]) for element in node.selector.body.elts]
-        elif type(node.selector.body) is ast.Dict:
-            node.selector.body.values = [ast.Call(func=ast.Attribute(value=dict_value,
-                                                                     attr='flatten'),
-                                                  args=[])
-                                         for dict_value in node.selector.body.values]
-        else:
-            node.selector.body = ast.Call(func=ast.Attribute(value=node.selector.body,
-                                                             attr='flatten'),
-                                          args=[])
-        call_node = self.visit_Select(node)
-        node.rep = self.get_rep(call_node)
+        self.visit_Select(node)
+        node.rep = 'ak.flatten(' + node.rep + ')'
         return node
 
     def visit_Where(self, node):
@@ -332,7 +329,17 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             slice_node = ast.Index(node.predicate.body)
         else:
             slice_node = node.predicate.body
-        node.predicate.body = ast.Subscript(value=ast.Name(id=subscriptable), slice=slice_node)
-        call_node = self.visit(ast.Call(func=node.predicate, args=[node.source]))
+        node.predicate.body = ast.Subscript(value=ast.Name(id=subscriptable),
+                                            slice=slice_node,
+                                            short_circuit=True)
+        call_node = ast.Call(func=node.predicate, args=[node.source])
+        node.rep = self.get_rep(call_node)
+        return node
+
+    def visit_Zip(self, node):
+        attribute_node = ast.Attribute(value=ast.Name(id='ak'),
+                                       attr='zip',
+                                       short_circuit=True)
+        call_node = ast.Call(func=attribute_node, args=[node.source])
         node.rep = self.get_rep(call_node)
         return node
