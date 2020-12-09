@@ -157,29 +157,29 @@ def test_ast_executor_where_vector_branch():
     assert ast_executor(python_ast).tolist() == [[], [2, 3], [13]]
 
 
-def test_ast_executor_where_vector_branch_list():
-    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
-                     + 'lambda row: [row.int_vector_branch, row.float_vector_branch]'
-                     + '.Where(lambda elements: elements[0] > 0))')
-    python_ast = ast.parse(python_source)
-    assert ast_executor(python_ast)['0'].tolist() == [[], [2, 3], [13]]
-    assert ast_executor(python_ast)['1'].tolist() == [[], [8.8, 9.9], [15.15]]
+# def test_ast_executor_where_vector_branch_list():
+#     python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+#                      + 'lambda row: [row.int_vector_branch, row.float_vector_branch]'
+#                      + '.Where(lambda elements: elements[0] > 0))')
+#     python_ast = ast.parse(python_source)
+#     assert ast_executor(python_ast)['0'].tolist() == [[], [2, 3], [13]]
+#     assert ast_executor(python_ast)['1'].tolist() == [[], [8.8, 9.9], [15.15]]
 
 
-def test_ast_executor_where_vector_branch_tuple():
-    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
-                     + 'lambda row: (row.int_vector_branch, row.float_vector_branch)'
-                     + '.Where(lambda elements: elements[0] > 0))')
-    python_ast = ast.parse(python_source)
-    assert ast_executor(python_ast)['0'].tolist() == [[], [2, 3], [13]]
-    assert ast_executor(python_ast)['1'].tolist() == [[], [8.8, 9.9], [15.15]]
+# def test_ast_executor_where_vector_branch_tuple():
+#     python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+#                      + 'lambda row: (row.int_vector_branch, row.float_vector_branch)'
+#                      + '.Where(lambda elements: elements[0] > 0))')
+#     python_ast = ast.parse(python_source)
+#     assert ast_executor(python_ast)['0'].tolist() == [[], [2, 3], [13]]
+#     assert ast_executor(python_ast)['1'].tolist() == [[], [8.8, 9.9], [15.15]]
 
 
-def test_ast_executor_where_vector_branch_dict():
-    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
-                     + "lambda row: {'ints': row.int_vector_branch,"
-                     + " 'floats': row.float_vector_branch}"
-                     + '.Where(lambda elements: elements.ints > 0))')
-    python_ast = ast.parse(python_source)
-    assert ast_executor(python_ast)['ints'].tolist() == [[], [2, 3], [13]]
-    assert ast_executor(python_ast)['floats'].tolist() == [[], [8.8, 9.9], [15.15]]
+# def test_ast_executor_where_vector_branch_dict():
+#     python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+#                      + "lambda row: {'ints': row.int_vector_branch,"
+#                      + " 'floats': row.float_vector_branch}"
+#                      + '.Where(lambda elements: elements.ints > 0))')
+#     python_ast = ast.parse(python_source)
+#     assert ast_executor(python_ast)['ints'].tolist() == [[], [2, 3], [13]]
+#     assert ast_executor(python_ast)['floats'].tolist() == [[], [8.8, 9.9], [15.15]]
