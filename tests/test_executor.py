@@ -184,4 +184,5 @@ def test_ast_executor_where_vector_branch_dict():
                      + '.Where(lambda elements: elements.ints > 0))')
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast)['ints'].tolist() == [[], [2, 3], [13]]
-    assert ak.max(abs(ast_executor(python_ast)['floats'] - ak.Array([[], [8.8, 9.9], [15.15]]))) < 1e-6
+    assert ak.max(abs(ast_executor(python_ast)['floats']
+                      - ak.Array([[], [8.8, 9.9], [15.15]]))) < 1e-6
