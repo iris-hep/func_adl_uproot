@@ -12,7 +12,7 @@ setuptools.setup(name='func_adl_uproot',
                  packages=setuptools.find_packages(exclude=['tests']),
                  python_requires=('>=2.7, '
                                   '!=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, <3.10'),
-                 install_requires=['awkward>=1',
+                 install_requires=['awkward>=1, !=1.0.1',
                                    'numpy',
                                    'qastle>=0.10',
                                    'uproot>=4'],
