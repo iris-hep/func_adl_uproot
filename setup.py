@@ -16,6 +16,7 @@ setuptools.setup(name='func_adl_uproot',
                                    'numpy',
                                    'qastle>=0.10',
                                    'uproot>=4'],
+                 extras_require={'test': ['flake8', 'pytest', 'pytest-cov']},
                  author='Mason Proffitt',
                  author_email='masonlp@uw.edu',
                  url='https://github.com/iris-hep/func_adl_uproot')
