@@ -5,8 +5,6 @@ if sys.version_info[0] < 3:
 else:
     from urllib.parse import urlparse
 
-import awkward as ak
-import uproot
 
 input_filenames_argument_name = 'input_filenames'
 tree_name_argument_name = 'tree_name'
@@ -111,14 +109,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                     + '}')
         return node
 
-    def get_globals(self):
-        return globals()
-
     def resolve_id(self, id):
-        if (id in ('True', 'False', 'None')
-           or id in self._id_scopes
-           or id in self.get_globals()
-           or id in ('abs', 'all', 'any', 'len', 'max', 'min', 'sum')):
+        if id in dir(__builtins__) or id in self._id_scopes:
             return id
         else:
             raise NameError('Unknown id: ' + id)
@@ -202,22 +194,12 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def visit_Subscript(self, node):
         value_rep = self.get_rep(node.value)
         slice_rep = self.get_rep(node.slice)
-        if hasattr(node, 'short_circuit') and node.short_circuit is True:
-            node.rep = value_rep + '[' + slice_rep + ']'
-        else:
-            node.rep = ('(' + value_rep + '[' + value_rep + '.fields[' + slice_rep + ']]'
-                        + ' if isinstance(' + value_rep + ', ak.Array)'
-                        + ' else ' + value_rep + '[' + slice_rep + '])')
+        node.rep = value_rep + '[' + slice_rep + ']'
         return node
 
     def visit_Attribute(self, node):
         value_rep = self.get_rep(node.value)
-        if hasattr(node, 'short_circuit') and node.short_circuit is True:
-            node.rep = value_rep + '.' + node.attr
-        else:
-            node.rep = ('(' + value_rep + '.' + node.attr
-                        + ' if hasattr(' + value_rep + ", '" + node.attr
-                        + "') else " + value_rep + "['" + node.attr + "'])")
+        node.rep = value_rep + '[' + repr(node.attr) + ']'
         return node
 
     def visit_Lambda(self, node):
@@ -294,11 +276,6 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if len(node.selector.args.args) != 1:
             raise TypeError('Lambda function in Select() must have exactly one argument, found '
                             + len(node.selector.args.args))
-        if type(node.selector.body) in (ast.List, ast.Tuple, ast.Dict):
-            attribute_node = ast.Attribute(value=ast.Name(id='ak'),
-                                           attr='zip',
-                                           short_circuit=True)
-            node.selector.body = ast.Call(func=attribute_node, args=[node.selector.body])
         call_node = ast.Call(func=node.selector, args=[node.source])
         node.rep = self.get_rep(call_node)
         return node
@@ -329,17 +306,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             slice_node = ast.Index(node.predicate.body)
         else:
             slice_node = node.predicate.body
-        node.predicate.body = ast.Subscript(value=ast.Name(id=subscriptable),
-                                            slice=slice_node,
-                                            short_circuit=True)
+        node.predicate.body = ast.Subscript(value=ast.Name(id=subscriptable), slice=slice_node)
         call_node = ast.Call(func=node.predicate, args=[node.source])
         node.rep = self.get_rep(call_node)
         return node
 
     def visit_Zip(self, node):
-        attribute_node = ast.Attribute(value=ast.Name(id='ak'),
-                                       attr='zip',
-                                       short_circuit=True)
-        call_node = ast.Call(func=attribute_node, args=[node.source])
-        node.rep = self.get_rep(call_node)
+        node.rep = 'ak.zip(' + self.get_rep(node.source) + ')'
         return node
