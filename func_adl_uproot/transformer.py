@@ -110,7 +110,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def resolve_id(self, id):
-        if id in dir(__builtins__) or id in self._id_scopes:
+        if id in __builtins__ or id in self._id_scopes:
             return id
         else:
             raise NameError('Unknown id: ' + id)
