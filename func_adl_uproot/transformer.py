@@ -194,7 +194,39 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def visit_Subscript(self, node):
         value_rep = self.get_rep(node.value)
         slice_rep = self.get_rep(node.slice)
-        node.rep = value_rep + '[' + slice_rep + ']'
+        if hasattr(node, 'short_circuit') and node.short_circuit is True:
+            node.rep = value_rep + '[' + slice_rep + ']'
+        else:
+            if isinstance(node.slice, ast.Slice):
+                node.rep = ('(' + value_rep + '[' + value_rep + '.fields[' + slice_rep + ']]'
+                            + ' if isinstance(' + value_rep + ', ak.Array)'
+                            + ' else ' + value_rep + '[' + slice_rep + '])')
+            elif (isinstance(node.slice, ast.Tuple)
+                  or ((sys.version_info[0] < 3
+                       or (sys.version_info[0] == 3 and sys.version_info[1] < 9))
+                      and isinstance(node.slice, ast.ExtSlice))):
+                raise NotImplementedError('Multidimensional slices are not supported')
+            else:
+                if ((sys.version_info[0] < 3
+                     or (sys.version_info[0] == 3
+                         and sys.version_info[1] < 9)) and isinstance(node.slice, ast.Index)):
+                    slice_value = node.slice.value
+                else:
+                    slice_value = node.slice
+                try:
+                    slice_eval = ast.literal_eval(slice_value)
+                    if isinstance(slice_eval, int):
+                        node.rep = ('(' + value_rep + '[' + value_rep + '.fields[' + slice_rep
+                                    + ']]' + ' if isinstance(' + value_rep + ', ak.Array)'
+                                    + ' else ' + value_rep + '[' + slice_rep + '])')
+                    else:
+                        node.rep = value_rep + '[' + slice_rep + ']'
+                except ValueError:
+                    node.rep = ('(' + value_rep + '[' + value_rep + '.fields[' + slice_rep + ']]'
+                                + ' if isinstance(' + value_rep + ', ak.Array)'
+                                + ' and (isinstance(' + slice_rep + ', int)'
+                                + ' or isinstance(' + slice_rep + ', slice))'
+                                + ' else ' + value_rep + '[' + slice_rep + '])')
         return node
 
     def visit_Attribute(self, node):
@@ -306,7 +338,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             slice_node = ast.Index(node.predicate.body)
         else:
             slice_node = node.predicate.body
-        node.predicate.body = ast.Subscript(value=ast.Name(id=subscriptable), slice=slice_node)
+        node.predicate.body = ast.Subscript(value=ast.Name(id=subscriptable),
+                                            slice=slice_node,
+                                            short_circuit=True)
         call_node = ast.Call(func=node.predicate, args=[node.source])
         node.rep = self.get_rep(call_node)
         return node
