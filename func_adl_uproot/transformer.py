@@ -5,8 +5,6 @@ if sys.version_info[0] < 3:
 else:
     from urllib.parse import urlparse
 
-import awkward as ak
-import uproot
 
 input_filenames_argument_name = 'input_filenames'
 tree_name_argument_name = 'tree_name'
@@ -111,14 +109,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                     + '}')
         return node
 
-    def get_globals(self):
-        return globals()
-
     def resolve_id(self, id):
-        if (id in ('True', 'False', 'None')
-           or id in self._id_scopes
-           or id in self.get_globals()
-           or id in ('abs', 'all', 'any', 'len', 'max', 'min', 'sum')):
+        if id in __builtins__ or id in self._id_scopes:
             return id
         else:
             raise NameError('Unknown id: ' + id)
@@ -205,19 +197,41 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if hasattr(node, 'short_circuit') and node.short_circuit is True:
             node.rep = value_rep + '[' + slice_rep + ']'
         else:
-            node.rep = ('(' + value_rep + '[' + value_rep + '.fields[' + slice_rep + ']]'
-                        + ' if isinstance(' + value_rep + ', ak.Array)'
-                        + ' else ' + value_rep + '[' + slice_rep + '])')
+            if isinstance(node.slice, ast.Slice):
+                node.rep = ('(' + value_rep + '[' + value_rep + '.fields[' + slice_rep + ']]'
+                            + ' if isinstance(' + value_rep + ', ak.Array)'
+                            + ' else ' + value_rep + '[' + slice_rep + '])')
+            elif (isinstance(node.slice, ast.Tuple)
+                  or ((sys.version_info[0] < 3
+                       or (sys.version_info[0] == 3 and sys.version_info[1] < 9))
+                      and isinstance(node.slice, ast.ExtSlice))):
+                raise NotImplementedError('Multidimensional slices are not supported')
+            else:
+                if ((sys.version_info[0] < 3
+                     or (sys.version_info[0] == 3
+                         and sys.version_info[1] < 9)) and isinstance(node.slice, ast.Index)):
+                    slice_value = node.slice.value
+                else:
+                    slice_value = node.slice
+                try:
+                    slice_eval = ast.literal_eval(slice_value)
+                    if isinstance(slice_eval, int):
+                        node.rep = ('(' + value_rep + '[' + value_rep + '.fields[' + slice_rep
+                                    + ']]' + ' if isinstance(' + value_rep + ', ak.Array)'
+                                    + ' else ' + value_rep + '[' + slice_rep + '])')
+                    else:
+                        node.rep = value_rep + '[' + slice_rep + ']'
+                except ValueError:
+                    node.rep = ('(' + value_rep + '[' + value_rep + '.fields[' + slice_rep + ']]'
+                                + ' if isinstance(' + value_rep + ', ak.Array)'
+                                + ' and (isinstance(' + slice_rep + ', int)'
+                                + ' or isinstance(' + slice_rep + ', slice))'
+                                + ' else ' + value_rep + '[' + slice_rep + '])')
         return node
 
     def visit_Attribute(self, node):
         value_rep = self.get_rep(node.value)
-        if hasattr(node, 'short_circuit') and node.short_circuit is True:
-            node.rep = value_rep + '.' + node.attr
-        else:
-            node.rep = ('(' + value_rep + '.' + node.attr
-                        + ' if hasattr(' + value_rep + ", '" + node.attr
-                        + "') else " + value_rep + "['" + node.attr + "'])")
+        node.rep = value_rep + '[' + repr(node.attr) + ']'
         return node
 
     def visit_Lambda(self, node):
@@ -294,11 +308,6 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if len(node.selector.args.args) != 1:
             raise TypeError('Lambda function in Select() must have exactly one argument, found '
                             + len(node.selector.args.args))
-        if type(node.selector.body) in (ast.List, ast.Tuple, ast.Dict):
-            attribute_node = ast.Attribute(value=ast.Name(id='ak'),
-                                           attr='zip',
-                                           short_circuit=True)
-            node.selector.body = ast.Call(func=attribute_node, args=[node.selector.body])
         call_node = ast.Call(func=node.selector, args=[node.source])
         node.rep = self.get_rep(call_node)
         return node
@@ -337,9 +346,5 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def visit_Zip(self, node):
-        attribute_node = ast.Attribute(value=ast.Name(id='ak'),
-                                       attr='zip',
-                                       short_circuit=True)
-        call_node = ast.Call(func=attribute_node, args=[node.source])
-        node.rep = self.get_rep(call_node)
+        node.rep = 'ak.zip(' + self.get_rep(node.source) + ')'
         return node

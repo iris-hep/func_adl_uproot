@@ -47,7 +47,14 @@ def test_ast_executor_list_without_treename():
                                                'bool_branch']
 
 
-def test_ast_executor_select_scalar_branch():
+def test_ast_executor_select_scalar_branch_subscript():
+    python_source = ("Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+                     + " lambda row: row['int_branch'])")
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [0, -1]
+
+
+def test_ast_executor_select_scalar_branch_attribute():
     python_source = ("Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
                      + ' lambda row: row.int_branch)')
     python_ast = ast.parse(python_source)
@@ -58,16 +65,16 @@ def test_ast_executor_select_scalar_branch_list():
     python_source = ("Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
                      + ' lambda row: [row.int_branch, row.long_branch])')
     python_ast = ast.parse(python_source)
-    assert ast_executor(python_ast)['0'].tolist() == [0, -1]
-    assert ast_executor(python_ast)['1'].tolist() == [0, -2]
+    assert ast_executor(python_ast)[0].tolist() == [0, -1]
+    assert ast_executor(python_ast)[1].tolist() == [0, -2]
 
 
 def test_ast_executor_select_scalar_branch_tuple():
     python_source = ("Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
                      + ' lambda row: (row.int_branch, row.long_branch))')
     python_ast = ast.parse(python_source)
-    assert ast_executor(python_ast)['0'].tolist() == [0, -1]
-    assert ast_executor(python_ast)['1'].tolist() == [0, -2]
+    assert ast_executor(python_ast)[0].tolist() == [0, -1]
+    assert ast_executor(python_ast)[1].tolist() == [0, -2]
 
 
 def test_ast_executor_select_scalar_branch_dict():
@@ -83,8 +90,8 @@ def test_ast_executor_select_of_select_scalar_branch_list():
                      + ' lambda row: [row.int_branch, row.long_branch])'
                      + '.Select(lambda row: [row[0], row[1]])')
     python_ast = ast.parse(python_source)
-    assert ast_executor(python_ast)['0'].tolist() == [0, -1]
-    assert ast_executor(python_ast)['1'].tolist() == [0, -2]
+    assert ast_executor(python_ast)[0].tolist() == [0, -1]
+    assert ast_executor(python_ast)[1].tolist() == [0, -2]
 
 
 def test_ast_executor_select_of_select_scalar_branch_tuple():
@@ -92,8 +99,8 @@ def test_ast_executor_select_of_select_scalar_branch_tuple():
                      + ' lambda row: (row.int_branch, row.long_branch))'
                      + '.Select(lambda row: (row[0], row[1]))')
     python_ast = ast.parse(python_source)
-    assert ast_executor(python_ast)['0'].tolist() == [0, -1]
-    assert ast_executor(python_ast)['1'].tolist() == [0, -2]
+    assert ast_executor(python_ast)[0].tolist() == [0, -1]
+    assert ast_executor(python_ast)[1].tolist() == [0, -2]
 
 
 def test_ast_executor_select_of_select_scalar_branch_dict():
@@ -129,7 +136,7 @@ def test_ast_executor_selectmany_vector_branch():
 
 def test_ast_executor_selectmany_vector_branch_list():
     python_source = ("SelectMany(EventDataset('tests/vectors_tree_file.root', 'tree'),"
-                     + ' lambda row: [row.int_vector_branch, row.float_vector_branch])')
+                     + ' lambda row: Zip([row.int_vector_branch, row.float_vector_branch]))')
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast)['0'].tolist() == [-1, 2, 3, 13]
     assert np.allclose(ast_executor(python_ast)['1'].tolist(), [-7.7, 8.8, 9.9, 15.15])
@@ -137,7 +144,7 @@ def test_ast_executor_selectmany_vector_branch_list():
 
 def test_ast_executor_selectmany_vector_branch_tuple():
     python_source = ("SelectMany(EventDataset('tests/vectors_tree_file.root', 'tree'),"
-                     + ' lambda row: (row.int_vector_branch, row.float_vector_branch))')
+                     + ' lambda row: Zip((row.int_vector_branch, row.float_vector_branch)))')
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast)['0'].tolist() == [-1, 2, 3, 13]
     assert np.allclose(ast_executor(python_ast)['1'].tolist(), [-7.7, 8.8, 9.9, 15.15])
@@ -145,8 +152,8 @@ def test_ast_executor_selectmany_vector_branch_tuple():
 
 def test_ast_executor_selectmany_vector_branch_dict():
     python_source = ("SelectMany(EventDataset('tests/vectors_tree_file.root', 'tree'),"
-                     + " lambda row: {'ints': row.int_vector_branch,"
-                     + " 'floats': row.float_vector_branch})")
+                     + " lambda row: Zip({'ints': row.int_vector_branch,"
+                     + " 'floats': row.float_vector_branch}))")
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast)['ints'].tolist() == [-1, 2, 3, 13]
     assert np.allclose(ast_executor(python_ast)['floats'].tolist(), [-7.7, 8.8, 9.9, 15.15])
