@@ -141,6 +141,14 @@ def test_ast_executor_select_vector_branch_list_zipped():
     assert np.allclose(ast_executor(python_ast)[1].tolist(), [(-1, -7.7), (2, 8.8), (3, 9.9)])
 
 
+def test_ast_executor_select_scalar_and_vector_branches_list():
+    python_source = ("Select(EventDataset('tests/scalars_and_vectors_tree_file.root', 'tree'),"
+                     + ' lambda row: [row.int_branch, row.int_vector_branch])')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast)['0'].tolist() == [0, -1, 5]
+    assert ast_executor(python_ast)['1'].tolist() == [[], [-2, 3, 4], [6]]
+
+
 def test_ast_executor_selectmany_vector_branch():
     python_source = ("SelectMany(EventDataset('tests/vectors_tree_file.root', 'tree'),"
                      + ' lambda row: row.int_vector_branch)')
