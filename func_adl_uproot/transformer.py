@@ -43,6 +43,7 @@ compare_op_dict = {ast.Eq: '==',
 
 class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def __init__(self):
+        self._depth = None
         self._id_scopes = {}
 
     def visit(self, node):
@@ -262,6 +263,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             if len(node.args) > 2:
                 raise TypeError('EventDataset() should have no more than two arguments, found '
                                 + str(len(node.args)))
+            self._depth = 0
             if len(node.args) >= 1:
                 if hasattr(node.args[0], 'elts'):
                     urls = node.args[0].elts
@@ -308,8 +310,13 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if len(node.selector.args.args) != 1:
             raise TypeError('Lambda function in Select() must have exactly one argument, found '
                             + len(node.selector.args.args))
+        self.visit(node.source)
+        self._depth += 1
         call_node = ast.Call(func=node.selector, args=[node.source])
-        node.rep = self.get_rep(call_node)
+        node.rep = ('(lambda selection: ak.zip(selection, depth_limit=' + repr(self._depth) + ')'
+                    + ' if not isinstance(selection, ak.Array)'
+                    + ' else selection)(' + self.get_rep(call_node) + ')')
+        self._depth -= 1
         return node
 
     def visit_SelectMany(self, node):
@@ -330,6 +337,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if len(node.predicate.args.args) != 1:
             raise TypeError('Lambda function in Where() must have exactly one argument, found '
                             + len(node.predicate.args.args))
+        self.visit(node.source)
+        self._depth += 1
         if sys.version_info[0] < 3:
             subscriptable = node.predicate.args.args[0].id
         else:
@@ -343,8 +352,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                                             short_circuit=True)
         call_node = ast.Call(func=node.predicate, args=[node.source])
         node.rep = self.get_rep(call_node)
+        self._depth -= 1
         return node
 
     def visit_Zip(self, node):
-        node.rep = 'ak.zip(' + self.get_rep(node.source) + ')'
+        self.visit(node.source)
+        node.rep = ('ak.zip(' + self.get_rep(node.source)
+                    + ', depth_limit=' + repr(self._depth + 1) + ')')
         return node
