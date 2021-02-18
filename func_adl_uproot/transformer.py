@@ -360,3 +360,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         node.rep = ('ak.zip(' + self.get_rep(node.source)
                     + ', depth_limit=' + repr(self._depth + 1) + ')')
         return node
+
+    def visit_Count(self, node):
+        self.visit(node.source)
+        node.rep = 'ak.count(' + self.get_rep(node.source) + ', axis=' + repr(self._depth) + ')'
+        return node
