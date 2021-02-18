@@ -10,12 +10,8 @@ class UprootDataset(EventDataset):
     def __init__(self, filenames=None, treename=None):
         self._q_ast = unwrap_ast(parse('EventDataset(' + repr(filenames) + ', '
                                                        + repr(treename) + ')'))
+        self._q_ast._event_dataset_subclass = self.__class__
 
-    async def execute_result_async(self, ast):
+    @staticmethod
+    async def execute_result_async(ast):
         return ast_executor(ast)
-
-    def _get_executor(self, executor=None):
-        if executor is not None:
-            return executor
-        else:
-            return self.execute_result_async
