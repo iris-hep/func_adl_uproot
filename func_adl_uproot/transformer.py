@@ -363,5 +363,5 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
 
     def visit_Count(self, node):
         self.visit(node.source)
-        node.rep = 'ak.count(' + self.get_rep(node.source) + ', axis=' + repr(self._depth) + ')'
+        node.rep = 'ak.num(' + self.get_rep(node.source) + ', axis=' + repr(self._depth) + ')'
         return node
