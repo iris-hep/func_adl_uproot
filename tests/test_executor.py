@@ -215,3 +215,17 @@ def test_ast_executor_where_vector_branch_dict():
     assert ast_executor(python_ast)['ints'].tolist() == [[], [2, 3], [13]]
     assert ak.max(abs(ast_executor(python_ast)['floats']
                       - ak.Array([[], [8.8, 9.9], [15.15]]))) < 1e-6
+
+
+def test_ast_executor_count_of_select_scalar_branch():
+    python_source = ("Count(Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+                     + "lambda row: row.int_branch))")
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast) == 2
+
+
+def test_ast_executor_select_of_count_vector_branch():
+    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + 'lambda row: Count(row.int_vector_branch))')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [0, 3, 1]
