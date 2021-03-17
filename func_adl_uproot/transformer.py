@@ -172,7 +172,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         body_rep = self.get_rep(node.body)
         test_rep = self.get_rep(node.test)
         orelse_rep = self.get_rep(node.orelse)
-        node.rep = '(' + body_rep + ' if ' + test_rep + ' else ' + orelse_rep + ')'
+        node.rep = 'ak.where(' + test_rep + ', ' + body_rep + ', ' + orelse_rep + ')'
         return node
 
     def visit_Index(self, node):
