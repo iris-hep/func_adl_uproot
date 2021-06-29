@@ -327,7 +327,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             raise TypeError('Lambda function in SelectMany() must have exactly one argument, '
                             'found ' + len(node.selector.args.args))
         self.visit_Select(node)
-        node.rep = 'ak.flatten(' + node.rep + ')'
+        node.rep = 'ak.flatten(' + node.rep + ', axis=' + repr(self._depth + 1) + ')'
         return node
 
     def visit_Where(self, node):
