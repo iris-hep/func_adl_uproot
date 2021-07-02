@@ -156,7 +156,14 @@ def test_ast_executor_selectmany_vector_branch():
     assert ast_executor(python_ast).tolist() == [-1, 2, 3, 13]
 
 
-def test_ast_executor_selectmany_vector_branch_list():
+def test_ast_executor_selectmany_vector_branch_dict():
+    python_source = ("SelectMany(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + " lambda row: {'ints': row.int_vector_branch})")
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast)['ints'].tolist() == [-1, 2, 3, 13]
+
+
+def test_ast_executor_selectmany_vector_branch_zipped_list():
     python_source = ("SelectMany(EventDataset('tests/vectors_tree_file.root', 'tree'),"
                      + ' lambda row: Zip([row.int_vector_branch, row.float_vector_branch]))')
     python_ast = ast.parse(python_source)
@@ -164,7 +171,7 @@ def test_ast_executor_selectmany_vector_branch_list():
     assert np.allclose(ast_executor(python_ast)['1'].tolist(), [-7.7, 8.8, 9.9, 15.15])
 
 
-def test_ast_executor_selectmany_vector_branch_tuple():
+def test_ast_executor_selectmany_vector_branch_zipped_tuple():
     python_source = ("SelectMany(EventDataset('tests/vectors_tree_file.root', 'tree'),"
                      + ' lambda row: Zip((row.int_vector_branch, row.float_vector_branch)))')
     python_ast = ast.parse(python_source)
@@ -172,7 +179,7 @@ def test_ast_executor_selectmany_vector_branch_tuple():
     assert np.allclose(ast_executor(python_ast)['1'].tolist(), [-7.7, 8.8, 9.9, 15.15])
 
 
-def test_ast_executor_selectmany_vector_branch_dict():
+def test_ast_executor_selectmany_vector_branch_zipped_dict():
     python_source = ("SelectMany(EventDataset('tests/vectors_tree_file.root', 'tree'),"
                      + " lambda row: Zip({'ints': row.int_vector_branch,"
                      + " 'floats': row.float_vector_branch}))")
