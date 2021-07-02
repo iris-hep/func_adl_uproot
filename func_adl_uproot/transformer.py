@@ -314,7 +314,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         self._depth += 1
         call_node = ast.Call(func=node.selector, args=[node.source])
         node.rep = ('(lambda selection: ak.zip(selection,'
-                    + ' depth_limit=(None if len(selection) <= 1 else ' + repr(self._depth) + '))'
+                    + ' depth_limit=(None if len(selection) == 1 else ' + repr(self._depth) + '))'
                     + ' if not isinstance(selection, ak.Array)'
                     + ' else selection)(' + self.get_rep(call_node) + ')')
         self._depth -= 1
