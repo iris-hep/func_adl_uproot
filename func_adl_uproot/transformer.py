@@ -227,8 +227,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def visit_Attribute(self, node):
-        value_rep = self.get_rep(node.value)
-        node.rep = value_rep + '[' + repr(node.attr) + ']'
+        node.rep = self.get_rep(node.value) + '.' + node.attr
         return node
 
     def visit_Lambda(self, node):
@@ -294,7 +293,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                         + ' for input_file in input_files}))[1])'
                         + '(' + source_rep + ', ' + tree_name_rep + ')')
         else:
-            func_rep = self.get_rep(node.func)
+            if isinstance(node.func, ast.Attribute) and node.func.attr == 'AsFourMomenta':
+                func_rep = 'vector.awk'
+                node.args.append(node.func.value)
+            else:
+                func_rep = self.get_rep(node.func)
             args_rep = ', '.join(self.get_rep(arg) for arg in node.args)
             node.rep = func_rep + '(' + args_rep + ')'
         return node
