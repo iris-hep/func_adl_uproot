@@ -366,3 +366,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         self.visit(node.source)
         node.rep = 'ak.num(' + self.get_rep(node.source) + ', axis=' + repr(self._depth) + ')'
         return node
+
+    def visit_CrossJoin(self, node):
+        node.rep = ('ak.cartesian(' + self.get_rep(ast.Tuple(elts=[node.first, node.second]))
+                    + ', axis=' + repr(self._depth) + ')')
+        return node

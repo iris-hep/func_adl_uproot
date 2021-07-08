@@ -236,3 +236,15 @@ def test_ast_executor_select_of_count_vector_branch():
                      + 'lambda row: Count(row.int_vector_branch))')
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [0, 3, 1]
+
+
+def test_ast_executor_cross_join():
+    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + " lambda row: row.int_vector_branch.CrossJoin(row.float_vector_branch))")
+    python_ast = ast.parse(python_source)
+    result = ast_executor(python_ast).tolist()
+    assert np.allclose(result[0], [])
+    assert np.allclose(result[1], [(-1, -7.7), (-1, 8.8), (-1, 9.9),
+                                   (2, -7.7), (2, 8.8), (2, 9.9),
+                                   (3, -7.7), (3, 8.8), (3, 9.9)])
+    assert np.allclose(result[2], [(13, 15.15)])
