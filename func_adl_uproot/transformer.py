@@ -371,3 +371,32 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         node.rep = ('ak.combinations(' + self.get_rep(node.source) + ', ' + self.get_rep(node.n)
                     + ', axis=' + repr(self._depth) + ')')
         return node
+
+    def visit_OrderBy(self, node):
+        if type(node.key_selector) is not ast.Lambda:
+            raise TypeError('Argument to OrderBy() must be a lambda function, found '
+                            + node.key_selector)
+        if len(node.key_selector.args.args) != 1:
+            raise TypeError('Lambda function in OrderBy() must have exactly one argument, found '
+                            + len(node.key_selector.args.args))
+        self.visit(node.source)
+        self._depth += 1
+        if sys.version_info[0] < 3:
+            subscriptable = node.key_selector.args.args[0].id
+        else:
+            subscriptable = node.key_selector.args.args[0].arg
+        self.visit(node.key_selector)
+        delattr(node.key_selector, 'rep')
+        node.key_selector.body.rep = ('ak.argsort(' + self.get_rep(node.key_selector.body)
+                                      + ', axis=' + repr(self._depth - 1) + ')')
+        if sys.version_info[0] < 3 or (sys.version_info[0] == 3 and sys.version_info[1] < 9):
+            slice_node = ast.Index(node.key_selector.body)
+        else:
+            slice_node = node.key_selector.body
+        node.key_selector.body = ast.Subscript(value=ast.Name(id=subscriptable),
+                                               slice=slice_node,
+                                               short_circuit=True)
+        call_node = ast.Call(func=node.key_selector, args=[node.source])
+        node.rep = self.get_rep(call_node)
+        self._depth -= 1
+        return node
