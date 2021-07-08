@@ -236,3 +236,18 @@ def test_ast_executor_select_of_count_vector_branch():
                      + 'lambda row: Count(row.int_vector_branch))')
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [0, 3, 1]
+
+
+def test_ast_executor_choose():
+    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + 'lambda row: row.int_vector_branch.Choose(2))')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [[], [(-1, 2), (-1, 3), (2, 3)], []]
+
+
+def test_ast_executor_select_of_choose():
+    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + 'lambda row: row.int_vector_branch.Choose(2)'
+                     + '.Select(lambda pair: pair[0] + pair[1]))')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [[], [1, 2, 5], []]
