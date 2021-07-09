@@ -266,6 +266,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 else:
                     urls = [node.args[0]]
                 urls = [ast.literal_eval(url) for url in urls]
+                urls = [url for url in urls if url is not None]
                 source_rep = (input_filenames_argument_name + ' '
                               + 'if ' + input_filenames_argument_name + ' is not None '
                               + 'else ' + repr(urls))
