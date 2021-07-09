@@ -1,9 +1,5 @@
 import ast
 import sys
-if sys.version_info[0] < 3:
-    from urlparse import urlparse
-else:
-    from urllib.parse import urlparse
 
 
 input_filenames_argument_name = 'input_filenames'
@@ -269,11 +265,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                     urls = node.args[0].elts
                 else:
                     urls = [node.args[0]]
-                paths = [''.join(urlparse(ast.literal_eval(url))[1:])
-                         for url in urls if ast.literal_eval(url) is not None]
+                urls = [ast.literal_eval(url) for url in urls]
+                urls = [url for url in urls if url is not None]
                 source_rep = (input_filenames_argument_name + ' '
                               + 'if ' + input_filenames_argument_name + ' is not None '
-                              + 'else ' + repr(paths))
+                              + 'else ' + repr(urls))
             else:
                 source_rep = input_filenames_argument_name
             source_rep = ('(lambda source: [source] if isinstance(source, str) else source)('
