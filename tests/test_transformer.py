@@ -121,7 +121,7 @@ def test_subscripts():
 
 
 def test_attribute():
-    assert_modified_source('abs.a', "abs['a']")
+    assert_modified_source('abs.a', "abs.a")
 
 
 def test_lambda():
