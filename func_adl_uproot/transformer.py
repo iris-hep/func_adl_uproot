@@ -293,7 +293,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                         + ' for input_file in input_files}))[1])'
                         + '(' + source_rep + ', ' + tree_name_rep + ')')
         else:
-            if isinstance(node.func, ast.Attribute) and node.func.attr == 'AsFourMomenta':
+            if isinstance(node.func, ast.Attribute) and node.func.attr == 'ToFourMomenta':
                 func_rep = 'vector.awk'
                 node.args.append(node.func.value)
             else:
