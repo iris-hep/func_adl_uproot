@@ -362,3 +362,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         self.visit(node.source)
         node.rep = 'ak.num(' + self.get_rep(node.source) + ', axis=' + repr(self._depth) + ')'
         return node
+
+    def visit_Choose(self, node):
+        self.visit(node.source)
+        node.rep = ('ak.combinations(' + self.get_rep(node.source) + ', ' + self.get_rep(node.n)
+                    + ', axis=' + repr(self._depth) + ')')
+        return node
