@@ -287,3 +287,44 @@ def test_ast_executor_tofourvector_mass():
     assert np.allclose(result[0].tolist(), [])
     assert np.allclose(result[1].tolist(), [75.739924362942, 9.65246082613, 925.7900432252])
     assert np.allclose(result[2].tolist(), [8.6420747579])
+
+
+def test_ast_executor_orderby_same_scalar_branch():
+    python_source = ("OrderBy(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+                     + 'lambda row: row.int_branch).Select(lambda row: row.int_branch)')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [-1, 0]
+
+
+def test_ast_executor_orderby_different_scalar_branch():
+    python_source = ("OrderBy(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+                     + 'lambda row: row.int_branch).Select(lambda row: row.float_branch)')
+    python_ast = ast.parse(python_source)
+    assert np.allclose(ast_executor(python_ast).tolist(), [3.3, 0])
+
+
+def test_ast_executor_orderby_negative_scalar_branch():
+    python_source = ("OrderBy(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+                     + 'lambda row: -row.int_branch).Select(lambda row: row.int_branch)')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [0, -1]
+
+
+def test_ast_executor_orderby_negative_vector_branch():
+    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + 'lambda row: row.int_vector_branch.OrderBy(lambda int_value: -int_value))')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [[], [3, 2, -1], [13]]
+
+
+def test_ast_executor_orderby_different_negative_vector_branch():
+    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + "lambda row: Zip({'int': row.int_vector_branch"
+                     + ", 'float': row.float_vector_branch})"
+                     + '.OrderBy(lambda elements: -elements.int)'
+                     + '.Select(lambda elements: elements.float))')
+    python_ast = ast.parse(python_source)
+    result = ast_executor(python_ast)
+    assert np.allclose(result[0].tolist(), [])
+    assert np.allclose(result[1].tolist(), [9.9, 8.8, -7.7])
+    assert np.allclose(result[2].tolist(), [15.15])
