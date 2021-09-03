@@ -12,5 +12,5 @@ class UprootDataset(EventDataset):
         self._q_ast.args = [unwrap_ast(parse(repr(filenames))), unwrap_ast(parse(repr(treename)))]
 
     @staticmethod
-    async def execute_result_async(ast):
+    async def execute_result_async(ast, *args, **kwargs):
         return ast_executor(ast)
