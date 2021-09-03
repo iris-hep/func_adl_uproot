@@ -4,6 +4,8 @@ import numpy as np
 
 import awkward as ak
 
+import qastle
+
 from func_adl_uproot import ast_executor
 
 
@@ -51,6 +53,19 @@ def test_ast_executor_select_scalar_branch_subscript():
     python_source = ("Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
                      + " lambda row: row['int_branch'])")
     python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [0, -1]
+
+
+def test_ast_executor_select_scalar_branch_subscript_qastle_text_ast():
+    text_ast = ("(Select (call EventDataset 'tests/scalars_tree_file.root' 'tree')"
+                + " (lambda (list row) (subscript row 'int_branch')))")
+    assert ast_executor(text_ast).tolist() == [0, -1]
+
+
+def test_ast_executor_select_scalar_branch_subscript_qastle_python_ast():
+    text_ast = ("(Select (call EventDataset 'tests/scalars_tree_file.root' 'tree')"
+                + " (lambda (list row) (subscript row 'int_branch')))")
+    python_ast = qastle.text_ast_to_python_ast(text_ast)
     assert ast_executor(python_ast).tolist() == [0, -1]
 
 
