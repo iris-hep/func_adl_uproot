@@ -346,6 +346,7 @@ def test_ast_executor_orderby_different_negative_vector_branch():
 
 
 def test_ast_executor_empty_branch():
-    python_source = "Select(EventDataset('tests/empty_branches_tree_file.root', 'tree'), lambda row: row.int_branch)"
+    python_source = ("Select(EventDataset('tests/empty_branches_tree_file.root', 'tree'),"
+                     + 'lambda row: row.int_branch)')
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == []
