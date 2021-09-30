@@ -41,6 +41,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def __init__(self):
         self._depth = None
         self._id_scopes = {}
+        self._projection_stack = []
 
     def visit(self, node):
         if hasattr(node, 'rep'):
@@ -311,12 +312,24 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                             + len(node.selector.args.args))
         self.visit(node.source)
         self._depth += 1
-        call_node = ast.Call(func=node.selector, args=[node.source])
+        self._projection_stack.append(node.selector.args.args[0].arg)
+        if self._depth > 2:
+            rep1, rep2 = self._projection_stack[-2], self._projection_stack[-1]
+            lambda_node = ast.Lambda(args=ast.arguments(args=[ast.arg(arg=rep1),
+                                                              ast.arg(arg=rep2)]),
+                                     body=node.selector.body)
+            call_rep = (self.get_rep(lambda_node) + '(*ak.unzip(ak.cartesian(('
+                        + rep1 + ', ' + self.get_rep(node.source)
+                        + '), axis=' + repr(self._depth - 2) + ', nested=True)))')
+        else:
+            call_node = ast.Call(func=node.selector, args=[node.source])
+            call_rep = self.get_rep(call_node)
         node.rep = ('(lambda selection: ak.zip(selection,'
                     + ' depth_limit=(None if len(selection) == 1 else ' + repr(self._depth) + '))'
                     + ' if not isinstance(selection, ak.Array)'
-                    + ' else selection)(' + self.get_rep(call_node) + ')')
+                    + ' else selection)(' + call_rep + ')')
         self._depth -= 1
+        self._projection_stack.pop()
         return node
 
     def visit_SelectMany(self, node):
