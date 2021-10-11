@@ -397,6 +397,21 @@ def test_ast_executor_first_vector_branch():
     assert ast_executor(python_ast).tolist() == [-1, 13]
 
 
+def test_ast_executor_elementat_scalar_branch():
+    python_source = ("Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+                     + "lambda row: row.int_branch).ElementAt(1)")
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast) == -1
+
+
+def test_ast_executor_elementat_vector_branch():
+    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + 'lambda row: row.int_vector_branch).Where(lambda ints: ints.Count() > 1)'
+                     + '.Select(lambda ints: ints.ElementAt(1))')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [2]
+
+
 def test_ast_executor_last_scalar_branch():
     python_source = ("Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
                      + "lambda row: row.int_branch).Last()")

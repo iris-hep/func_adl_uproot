@@ -421,6 +421,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         node.rep = self.get_rep(node.source) + '[' + ':, ' * self._depth + '0]'
         return node
 
+    def visit_ElementAt(self, node):
+        node.rep = (self.get_rep(node.source) + '[' + ':, ' * self._depth
+                    + self.get_rep(node.index) + ']')
+        return node
+
     def visit_Last(self, node):
         node.rep = self.get_rep(node.source) + '[' + ':, ' * self._depth + '-1]'
         return node
