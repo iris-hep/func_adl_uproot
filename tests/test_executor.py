@@ -395,3 +395,18 @@ def test_ast_executor_first_vector_branch():
                      + '.Select(lambda ints: ints.First())')
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [-1, 13]
+
+
+def test_ast_executor_last_scalar_branch():
+    python_source = ("Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+                     + "lambda row: row.int_branch).Last()")
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast) == -1
+
+
+def test_ast_executor_last_vector_branch():
+    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + 'lambda row: row.int_vector_branch).Where(lambda ints: ints.Count() > 0)'
+                     + '.Select(lambda ints: ints.Last())')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [3, 13]
