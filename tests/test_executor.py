@@ -380,3 +380,18 @@ def test_ast_executor_cross_join():
                                    [(2, -7.7), (2, 8.8), (2, 9.9)],
                                    [(3, -7.7), (3, 8.8), (3, 9.9)]])
     assert np.allclose(result[2], [[(13, 15.15)]])
+
+
+def test_ast_executor_first_scalar_branch():
+    python_source = ("Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+                     + "lambda row: row.int_branch).First()")
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast) == 0
+
+
+def test_ast_executor_first_vector_branch():
+    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + 'lambda row: row.int_vector_branch).Where(lambda ints: ints.Count() > 0)'
+                     + '.Select(lambda ints: ints.First())')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [-1, 13]
