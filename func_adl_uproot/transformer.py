@@ -153,15 +153,18 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def visit_Compare(self, node):
-        left_rep = self.get_rep(node.left)
-        node.rep = '(' + left_rep
-        for operator, comparator in zip(node.ops, node.comparators):
+        comparison_reps = []
+        full_comparators = [node.left] + node.comparators
+        for left, operator, right in zip(full_comparators[:-1], node.ops, full_comparators[1:]):
             if type(operator) not in compare_op_dict:
                 raise SyntaxError('Unimplemented comparison operation: ' + operator)
+            left_rep = self.get_rep(left)
             operator_rep = compare_op_dict[type(operator)]
-            comparator_rep = self.get_rep(comparator)
-            node.rep += ' ' + operator_rep + ' ' + comparator_rep
-        node.rep += ')'
+            right_rep = self.get_rep(right)
+            comparison_reps.append('(' + left_rep + ' ' + operator_rep + ' ' + right_rep + ')')
+        node.rep = ' & '.join(comparison_reps)
+        if len(node.ops) > 1:
+            node.rep = '(' + node.rep + ')'
         return node
 
     def visit_IfExp(self, node):
