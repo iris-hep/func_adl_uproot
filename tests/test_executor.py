@@ -135,6 +135,14 @@ def test_ast_executor_where_scalar_branch():
     assert ast_executor(python_ast).tolist() == [-2]
 
 
+def test_ast_executor_where_scalar_branch_multiple_comparisons():
+    python_source = ("Where(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+                     + ' lambda row: -1.5 < row.int_branch < -0.5)'
+                     + '.Select(lambda row: row.long_branch)')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [-2]
+
+
 def test_ast_executor_select_vector_branch():
     python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
                      + ' lambda row: row.int_vector_branch)')
@@ -208,6 +216,14 @@ def test_ast_executor_where_vector_branch():
                      + "lambda row: row.int_vector_branch.Where(lambda int_value: int_value > 0))")
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [[], [2, 3], [13]]
+
+
+def test_ast_executor_where_vector_branch_multiple_comparisons():
+    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + "lambda row: row.int_vector_branch"
+                     + ".Where(lambda int_value: 0 < int_value < 4))")
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [[], [2, 3], []]
 
 
 def test_ast_executor_where_vector_branch_list():
