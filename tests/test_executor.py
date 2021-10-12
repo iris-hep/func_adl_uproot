@@ -350,3 +350,17 @@ def test_ast_executor_empty_branch():
                      + 'lambda row: row.int_branch)')
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == []
+
+
+def test_ast_executor_cross_join():
+    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + ' lambda row: row.int_vector_branch.Select('
+                     + 'lambda int_value: row.float_vector_branch.Select('
+                     + 'lambda float_value: (int_value, float_value))))')
+    python_ast = ast.parse(python_source)
+    result = ast_executor(python_ast).tolist()
+    assert np.allclose(result[0], [])
+    assert np.allclose(result[1], [[(-1, -7.7), (-1, 8.8), (-1, 9.9)],
+                                   [(2, -7.7), (2, 8.8), (2, 9.9)],
+                                   [(3, -7.7), (3, 8.8), (3, 9.9)]])
+    assert np.allclose(result[2], [[(13, 15.15)]])
