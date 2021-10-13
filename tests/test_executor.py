@@ -269,6 +269,48 @@ def test_ast_executor_select_of_count_vector_branch():
     assert ast_executor(python_ast).tolist() == [0, 3, 1]
 
 
+def test_ast_executor_min_of_select_scalar_branch():
+    python_source = ("EventDataset('tests/scalars_tree_file.root', 'tree')"
+                     + ".Select(lambda row: row.int_branch).Min()")
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast) == -1
+
+
+def test_ast_executor_select_of_min_vector_branch():
+    python_source = ("EventDataset('tests/vectors_tree_file.root', 'tree')"
+                     + '.Select(lambda row: row.int_vector_branch.Min())')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [None, -1, 13]
+
+
+def test_ast_executor_max_of_select_scalar_branch():
+    python_source = ("EventDataset('tests/scalars_tree_file.root', 'tree')"
+                     + ".Select(lambda row: row.int_branch).Max()")
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast) == 0
+
+
+def test_ast_executor_select_of_max_vector_branch():
+    python_source = ("EventDataset('tests/vectors_tree_file.root', 'tree')"
+                     + '.Select(lambda row: row.int_vector_branch.Max())')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [None, 3, 13]
+
+
+def test_ast_executor_sum_of_select_scalar_branch():
+    python_source = ("EventDataset('tests/scalars_tree_file.root', 'tree')"
+                     + ".Select(lambda row: row.int_branch).Sum()")
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast) == -1
+
+
+def test_ast_executor_select_of_sum_vector_branch():
+    python_source = ("EventDataset('tests/vectors_tree_file.root', 'tree')"
+                     + '.Select(lambda row: row.int_vector_branch.Sum())')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [0, 4, 13]
+
+
 def test_ast_executor_choose():
     python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
                      + 'lambda row: row.int_vector_branch.Choose(2))')
