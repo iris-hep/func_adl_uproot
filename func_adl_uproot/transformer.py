@@ -382,6 +382,21 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         node.rep = 'ak.num(' + self.get_rep(node.source) + ', axis=' + repr(self._depth) + ')'
         return node
 
+    def visit_Min(self, node):
+        self.visit(node.source)
+        node.rep = 'ak.min(' + self.get_rep(node.source) + ', axis=' + repr(self._depth) + ')'
+        return node
+
+    def visit_Max(self, node):
+        self.visit(node.source)
+        node.rep = 'ak.max(' + self.get_rep(node.source) + ', axis=' + repr(self._depth) + ')'
+        return node
+
+    def visit_Sum(self, node):
+        self.visit(node.source)
+        node.rep = 'ak.sum(' + self.get_rep(node.source) + ', axis=' + repr(self._depth) + ')'
+        return node
+
     def visit_Choose(self, node):
         self.visit(node.source)
         node.rep = ('ak.combinations(' + self.get_rep(node.source) + ', ' + self.get_rep(node.n)
