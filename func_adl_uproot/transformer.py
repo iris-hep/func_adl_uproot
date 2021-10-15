@@ -403,13 +403,13 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                     + ', axis=' + repr(self._depth) + ')')
         return node
 
-    def visit_OrderBy(self, node):
+    def visit_OrderBy(self, node, ascending=True):
         if type(node.key_selector) is not ast.Lambda:
             raise TypeError('Argument to OrderBy() must be a lambda function, found '
-                            + node.key_selector)
+                            + str(type(node.key_selector)))
         if len(node.key_selector.args.args) != 1:
             raise TypeError('Lambda function in OrderBy() must have exactly one argument, found '
-                            + len(node.key_selector.args.args))
+                            + str(len(node.key_selector.args.args)))
         self.visit(node.source)
         self._depth += 1
         if sys.version_info[0] < 3:
@@ -419,7 +419,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         self.visit(node.key_selector)
         delattr(node.key_selector, 'rep')
         node.key_selector.body.rep = ('ak.argsort(' + self.get_rep(node.key_selector.body)
-                                      + ', axis=' + repr(self._depth - 1) + ')')
+                                      + ', axis=' + repr(self._depth - 1)
+                                      + ', ascending=' + str(ascending) + ')')
         if sys.version_info[0] < 3 or (sys.version_info[0] == 3 and sys.version_info[1] < 9):
             slice_node = ast.Index(node.key_selector.body)
         else:
@@ -430,6 +431,16 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         call_node = ast.Call(func=node.key_selector, args=[node.source])
         node.rep = self.get_rep(call_node)
         self._depth -= 1
+        return node
+
+    def visit_OrderByDescending(self, node):
+        if type(node.key_selector) is not ast.Lambda:
+            raise TypeError('Argument to OrderByDescending() must be a lambda function, found '
+                            + str(type(node.key_selector)))
+        if len(node.key_selector.args.args) != 1:
+            raise TypeError('Lambda function in OrderByDescending() must have exactly one'
+                            + 'argument, found ' + str(len(node.key_selector.args.args)))
+        node = self.visit_OrderBy(node, ascending=False)
         return node
 
     def visit_First(self, node):
