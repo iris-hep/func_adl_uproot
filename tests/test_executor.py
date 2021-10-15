@@ -403,6 +403,13 @@ def test_ast_executor_orderby_different_negative_vector_branch():
     assert np.allclose(result[2].tolist(), [15.15])
 
 
+def test_ast_executor_orderbydescending():
+    python_source = ("OrderByDescending(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+                     + 'lambda row: row.int_branch).Select(lambda row: row.int_branch)')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [0, -1]
+
+
 def test_ast_executor_empty_branch():
     python_source = ("Select(EventDataset('tests/empty_branches_tree_file.root', 'tree'),"
                      + 'lambda row: row.int_branch)')
