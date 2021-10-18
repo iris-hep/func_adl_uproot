@@ -483,6 +483,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                     + self.get_rep(node.index) + ']')
         return node
 
+    def visit_Contains(self, node):
+        compare_node = ast.Compare(left=node.source, ops=[ast.Eq()], comparators=[node.value])
+        node.rep = 'ak.any(' + self.get_rep(compare_node) + ', axis=' + repr(self._depth) + ')'
+        return node
+
     def visit_Last(self, node):
         node.rep = self.get_rep(node.source) + '[' + ':, ' * self._depth + '-1]'
         return node
