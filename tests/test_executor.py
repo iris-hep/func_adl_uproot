@@ -474,3 +474,45 @@ def test_ast_executor_last_vector_branch():
                      + '.Select(lambda ints: ints.Last())')
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [3, 13]
+
+
+def test_ast_executor_all_scalar_branch_false():
+    python_source = ("EventDataset('tests/scalars_tree_file.root', 'tree')"
+                     + ".All(lambda row: row.int_branch > 0)")
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast) is False
+
+
+def test_ast_executor_all_scalar_branch_true():
+    python_source = ("EventDataset('tests/scalars_tree_file.root', 'tree')"
+                     + ".All(lambda row: row.int_branch > -2)")
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast) is True
+
+
+def test_ast_executor_all_vector_branch():
+    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + 'lambda row: row.int_vector_branch.All(lambda int_value: int_value > 0))')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [True, False, True]
+
+
+def test_ast_executor_any_scalar_branch_false():
+    python_source = ("EventDataset('tests/scalars_tree_file.root', 'tree')"
+                     + ".Any(lambda row: row.int_branch > 0)")
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast) is False
+
+
+def test_ast_executor_any_scalar_branch_true():
+    python_source = ("EventDataset('tests/scalars_tree_file.root', 'tree')"
+                     + ".Any(lambda row: row.int_branch > -1)")
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast) is True
+
+
+def test_ast_executor_any_vector_branch():
+    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + 'lambda row: row.int_vector_branch.Any(lambda int_value: int_value > 0))')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [False, True, True]
