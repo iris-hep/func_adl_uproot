@@ -383,6 +383,12 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         node.rep = 'ak.any(' + self.get_rep(select_node) + ', axis=' + repr(self._depth) + ')'
         return node
 
+    def visit_Concat(self, node):
+        tuple_node = ast.Tuple(elts=[node.first, node.second])
+        node.rep = ('ak.concatenate(' + self.get_rep(tuple_node)
+                    + ', axis=' + repr(self._depth) + ')')
+        return node
+
     def visit_Zip(self, node):
         self.visit(node.source)
         node.rep = ('ak.zip(' + self.get_rep(node.source)

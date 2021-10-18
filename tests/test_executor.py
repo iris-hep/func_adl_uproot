@@ -516,3 +516,10 @@ def test_ast_executor_any_vector_branch():
                      + 'lambda row: row.int_vector_branch.Any(lambda int_value: int_value > 0))')
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [False, True, True]
+
+
+def test_ast_executor_concat():
+    python_source = ("EventDataset('tests/vectors_tree_file.root', 'tree').Select("
+                     + 'lambda row: row.int_vector_branch.Concat(row.float_vector_branch))')
+    python_ast = ast.parse(python_source)
+    assert ak.max(ast_executor(python_ast) - [[], [-1, 2, 3, -7.7, 8.8, 9.9], [13, 15.15]]) < 1e-6
