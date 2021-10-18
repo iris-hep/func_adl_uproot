@@ -1,6 +1,8 @@
 import ast
 import sys
 
+from qastle import Select
+
 
 input_filenames_argument_name = 'input_filenames'
 tree_name_argument_name = 'tree_name'
@@ -369,6 +371,16 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         call_node = ast.Call(func=node.predicate, args=[node.source])
         node.rep = self.get_rep(call_node)
         self._depth -= 1
+        return node
+
+    def visit_All(self, node):
+        select_node = Select(source=node.source, selector=node.predicate)
+        node.rep = 'ak.all(' + self.get_rep(select_node) + ', axis=' + repr(self._depth) + ')'
+        return node
+
+    def visit_Any(self, node):
+        select_node = Select(source=node.source, selector=node.predicate)
+        node.rep = 'ak.any(' + self.get_rep(select_node) + ', axis=' + repr(self._depth) + ')'
         return node
 
     def visit_Zip(self, node):
