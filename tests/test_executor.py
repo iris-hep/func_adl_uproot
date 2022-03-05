@@ -501,6 +501,20 @@ def test_ast_executor_contains_vector_branch():
     assert ast_executor(python_ast).tolist() == [False, True, False]
 
 
+def test_ast_executor_contains_scalar_branch_in_vector_branch():
+    python_source = ("Select(EventDataset('tests/scalars_and_vectors_tree_file.root', 'tree'),"
+                     + ' lambda row: row.int_vector_branch.Contains(row.int_branch + 4))')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [False, True, False]
+
+
+def test_ast_executor_contains_vector_branch_in_vector_branch():
+    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + 'lambda row: row.float_vector_branch.Select(lambda float_value: row.int_vector_branch.Contains(float_value // 3 + 1)))')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [[], [False, True, False], [False]]
+
+
 def test_ast_executor_last_scalar_branch():
     python_source = ("Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
                      + "lambda row: row.int_branch).Last()")

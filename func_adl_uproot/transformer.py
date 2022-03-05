@@ -484,8 +484,10 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def visit_Contains(self, node):
-        compare_node = ast.Compare(left=node.source, ops=[ast.Eq()], comparators=[node.value])
-        node.rep = 'ak.any(' + self.get_rep(compare_node) + ', axis=' + repr(self._depth) + ')'
+        tuple_rep = self.get_rep(ast.Tuple(elts=[node.value, node.source]))
+        comparator_rep = '*ak.unzip(ak.cartesian(' + tuple_rep + ',  axis=' + repr(self._depth - 1) + ', nested=True)) if isinstance(' + self.get_rep(node.value) + ', ak.Array) and getattr(' + self.get_rep(node.value) + ", 'ndim') >= getattr(" + self.get_rep(node.source) + ", 'ndim') else " + tuple_rep
+        compare_rep = '(lambda x, y: x == y)(' + comparator_rep + ')'
+        node.rep = 'ak.any(' + compare_rep + ', axis=' + repr(self._depth) + ')'
         return node
 
     def visit_Last(self, node):
