@@ -42,6 +42,7 @@ compare_op_dict = {ast.Eq: '==',
 class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def __init__(self):
         self._depth = None
+        self._tuple_depths = []
         self._id_scopes = {}
         self._projection_stack = []
 
@@ -316,9 +317,15 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             raise TypeError('Lambda function in Select() must have exactly one argument, found '
                             + len(node.selector.args.args))
         self.visit(node.source)
+        if self._depth in self._tuple_depths:
+            at_tuple = True
+            original_source_rep = self.get_rep(node.source)
+            node.source.rep = 'x'
+        else:
+            at_tuple = False
         self._depth += 1
         self._projection_stack.append(node.selector.args.args[0].arg)
-        if self._depth > 2:
+        if self._depth > 2 and not at_tuple:
             rep1, rep2 = self._projection_stack[-2], self._projection_stack[-1]
             lambda_node = ast.Lambda(args=ast.arguments(args=[ast.arg(arg=rep1),
                                                               ast.arg(arg=rep2)]),
@@ -329,12 +336,17 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         else:
             call_node = ast.Call(func=node.selector, args=[node.source])
             call_rep = self.get_rep(call_node)
-        node.rep = ('(lambda selection: ak.zip(selection,'
-                    + ' depth_limit=(None if len(selection) == 1 else ' + repr(self._depth) + '))'
-                    + ' if not isinstance(selection, ak.Array)'
-                    + ' else selection)(' + call_rep + ')')
+        select_rep = ('(lambda selection: ak.zip(selection,'
+                      + ' depth_limit=(None if len(selection) == 1 else ' + repr(self._depth)
+                      + '))' + ' if not isinstance(selection, ak.Array)'
+                      + ' else selection)(' + call_rep + ')')
         self._depth -= 1
         self._projection_stack.pop()
+        if at_tuple:
+            node.rep = ('ak.zip([' + select_rep + ' for x in ak.unzip(' + original_source_rep
+                        + ')])')
+        else:
+            node.rep = select_rep
         return node
 
     def visit_SelectMany(self, node):
@@ -419,6 +431,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         self.visit(node.source)
         node.rep = ('ak.combinations(' + self.get_rep(node.source) + ', ' + self.get_rep(node.n)
                     + ', axis=' + repr(self._depth) + ')')
+        self._tuple_depths.append(self._depth + 1)
         return node
 
     def visit_OrderBy(self, node, ascending=True):
