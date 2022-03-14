@@ -326,6 +326,25 @@ def test_ast_executor_select_of_choose():
     assert ast_executor(python_ast).tolist() == [[], [1, 2, 5], []]
 
 
+def test_ast_executor_choose_zipped_dict():
+    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + "lambda row: {'ints': row.int_vector_branch}.Zip().Choose(2))")
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [[],
+                                                 [({'ints': -1}, {'ints': 2}),
+                                                  ({'ints': -1}, {'ints': 3}),
+                                                  ({'ints': 2}, {'ints': 3})],
+                                                 []]
+
+
+def test_ast_executor_field_of_choose():
+    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+                     + "lambda row: {'int': row.int_vector_branch}.Zip().Choose(2)"
+                     + '.Select(lambda pair: pair.Select(lambda record: record.int)))')
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [[], [(-1, 2), (-1, 3), (2, 3)], []]
+
+
 def test_ast_executor_tofourvector():
     python_source = ("Select(EventDataset('tests/four-vector_tree_file.root', 'tree'),"
                      + "lambda row: Zip({'pt': row.pt_vector_branch, 'eta': row.eta_vector_branch,"
