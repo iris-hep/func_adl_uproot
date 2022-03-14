@@ -104,20 +104,25 @@ def test_conditional():
 
 def test_subscripts():
     assert_identical_source("abs['a']")
-    assert_modified_source('abs[0]',
-                           ('(abs[abs.fields[0]]'
-                            + ' if isinstance(abs, ak.Array) else abs[0])'))
-    assert_modified_source('abs[abs]',
-                           ('(abs[abs.fields[abs]]'
-                            + ' if isinstance(abs, ak.Array)'
-                            + ' and (isinstance(abs, int) or isinstance(abs, slice))'
-                            + ' else abs[abs])'))
-    assert_modified_source('abs[:]',
-                           ('(abs[abs.fields[:]]'
-                            + ' if isinstance(abs, ak.Array) else abs[:])'))
-    assert_modified_source('abs[1:4:2]',
-                           ('(abs[abs.fields[1:4:2]]'
-                            + ' if isinstance(abs, ak.Array) else abs[1:4:2])'))
+    assert_modified_source(
+        'abs[0]', ('(abs[abs.fields[0]]' + ' if isinstance(abs, ak.Array) else abs[0])')
+    )
+    assert_modified_source(
+        'abs[abs]',
+        (
+            '(abs[abs.fields[abs]]'
+            + ' if isinstance(abs, ak.Array)'
+            + ' and (isinstance(abs, int) or isinstance(abs, slice))'
+            + ' else abs[abs])'
+        ),
+    )
+    assert_modified_source(
+        'abs[:]', ('(abs[abs.fields[:]]' + ' if isinstance(abs, ak.Array) else abs[:])')
+    )
+    assert_modified_source(
+        'abs[1:4:2]',
+        ('(abs[abs.fields[1:4:2]]' + ' if isinstance(abs, ak.Array) else abs[1:4:2])'),
+    )
 
 
 def test_attribute():
