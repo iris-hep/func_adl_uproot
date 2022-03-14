@@ -7,36 +7,37 @@ from qastle import Select
 input_filenames_argument_name = 'input_filenames'
 tree_name_argument_name = 'tree_name'
 
-unary_op_dict = {ast.UAdd: '+',
-                 ast.USub: '-',
-                 ast.Invert: '~'}
+unary_op_dict = {ast.UAdd: '+', ast.USub: '-', ast.Invert: '~'}
 
-bin_op_dict = {ast.Add: '+',
-               ast.Sub: '-',
-               ast.Mult: '*',
-               ast.Div: '/',
-               ast.FloorDiv: '//',
-               ast.Mod: '%',
-               ast.Pow: '**',
-               ast.LShift: '<<',
-               ast.RShift: '>>',
-               ast.BitOr: '|',
-               ast.BitXor: '^',
-               ast.BitAnd: '&'}
+bin_op_dict = {
+    ast.Add: '+',
+    ast.Sub: '-',
+    ast.Mult: '*',
+    ast.Div: '/',
+    ast.FloorDiv: '//',
+    ast.Mod: '%',
+    ast.Pow: '**',
+    ast.LShift: '<<',
+    ast.RShift: '>>',
+    ast.BitOr: '|',
+    ast.BitXor: '^',
+    ast.BitAnd: '&',
+}
 
-bool_op_dict = {ast.And: 'np.logical_and',
-                ast.Or: 'np.logical_or'}
+bool_op_dict = {ast.And: 'np.logical_and', ast.Or: 'np.logical_or'}
 
-compare_op_dict = {ast.Eq: '==',
-                   ast.NotEq: '!=',
-                   ast.Lt: '<',
-                   ast.LtE: '<=',
-                   ast.Gt: '>',
-                   ast.GtE: '>=',
-                   ast.Is: 'is',
-                   ast.IsNot: 'is not',
-                   ast.In: 'in',
-                   ast.NotIn: 'not in'}
+compare_op_dict = {
+    ast.Eq: '==',
+    ast.NotEq: '!=',
+    ast.Lt: '<',
+    ast.LtE: '<=',
+    ast.Gt: '>',
+    ast.GtE: '>=',
+    ast.Is: 'is',
+    ast.IsNot: 'is not',
+    ast.In: 'in',
+    ast.NotIn: 'not in',
+}
 
 
 class PythonSourceGeneratorTransformer(ast.NodeTransformer):
@@ -102,12 +103,14 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def visit_Dict(self, node):
-        node.rep = ('{'
-                    + ', '.join(self.get_rep(key)
-                                + ': '
-                                + self.get_rep(value) for key, value in zip(node.keys,
-                                                                            node.values))
-                    + '}')
+        node.rep = (
+            '{'
+            + ', '.join(
+                self.get_rep(key) + ': ' + self.get_rep(value)
+                for key, value in zip(node.keys, node.values)
+            )
+            + '}'
+        )
         return node
 
     def resolve_id(self, id):
@@ -151,9 +154,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if type(node.op) not in bool_op_dict:
             raise SyntaxError('Unimplemented boolean operation: ' + node.op)
         bool_op_func = bool_op_dict[type(node.op)]
-        node.rep = (bool_op_func + '('
-                    + ', '.join([self.get_rep(value) for value in node.values])
-                    + ')')
+        node.rep = (
+            bool_op_func + '(' + ', '.join([self.get_rep(value) for value in node.values]) + ')'
+        )
         return node
 
     def visit_Compare(self, node):
@@ -202,35 +205,82 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             node.rep = value_rep + '[' + slice_rep + ']'
         else:
             if isinstance(node.slice, ast.Slice):
-                node.rep = ('(' + value_rep + '[' + value_rep + '.fields[' + slice_rep + ']]'
-                            + ' if isinstance(' + value_rep + ', ak.Array)'
-                            + ' else ' + value_rep + '[' + slice_rep + '])')
-            elif (isinstance(node.slice, ast.Tuple)
-                  or ((sys.version_info[0] < 3
-                       or (sys.version_info[0] == 3 and sys.version_info[1] < 9))
-                      and isinstance(node.slice, ast.ExtSlice))):
+                node.rep = (
+                    '('
+                    + value_rep
+                    + '['
+                    + value_rep
+                    + '.fields['
+                    + slice_rep
+                    + ']]'
+                    + ' if isinstance('
+                    + value_rep
+                    + ', ak.Array)'
+                    + ' else '
+                    + value_rep
+                    + '['
+                    + slice_rep
+                    + '])'
+                )
+            elif isinstance(node.slice, ast.Tuple) or (
+                (sys.version_info[0] < 3 or (sys.version_info[0] == 3 and sys.version_info[1] < 9))
+                and isinstance(node.slice, ast.ExtSlice)
+            ):
                 raise NotImplementedError('Multidimensional slices are not supported')
             else:
-                if ((sys.version_info[0] < 3
-                     or (sys.version_info[0] == 3
-                         and sys.version_info[1] < 9)) and isinstance(node.slice, ast.Index)):
+                if (
+                    sys.version_info[0] < 3
+                    or (sys.version_info[0] == 3 and sys.version_info[1] < 9)
+                ) and isinstance(node.slice, ast.Index):
                     slice_value = node.slice.value
                 else:
                     slice_value = node.slice
                 try:
                     slice_eval = ast.literal_eval(slice_value)
                     if isinstance(slice_eval, int):
-                        node.rep = ('(' + value_rep + '[' + value_rep + '.fields[' + slice_rep
-                                    + ']]' + ' if isinstance(' + value_rep + ', ak.Array)'
-                                    + ' else ' + value_rep + '[' + slice_rep + '])')
+                        node.rep = (
+                            '('
+                            + value_rep
+                            + '['
+                            + value_rep
+                            + '.fields['
+                            + slice_rep
+                            + ']]'
+                            + ' if isinstance('
+                            + value_rep
+                            + ', ak.Array)'
+                            + ' else '
+                            + value_rep
+                            + '['
+                            + slice_rep
+                            + '])'
+                        )
                     else:
                         node.rep = value_rep + '[' + slice_rep + ']'
                 except ValueError:
-                    node.rep = ('(' + value_rep + '[' + value_rep + '.fields[' + slice_rep + ']]'
-                                + ' if isinstance(' + value_rep + ', ak.Array)'
-                                + ' and (isinstance(' + slice_rep + ', int)'
-                                + ' or isinstance(' + slice_rep + ', slice))'
-                                + ' else ' + value_rep + '[' + slice_rep + '])')
+                    node.rep = (
+                        '('
+                        + value_rep
+                        + '['
+                        + value_rep
+                        + '.fields['
+                        + slice_rep
+                        + ']]'
+                        + ' if isinstance('
+                        + value_rep
+                        + ', ak.Array)'
+                        + ' and (isinstance('
+                        + slice_rep
+                        + ', int)'
+                        + ' or isinstance('
+                        + slice_rep
+                        + ', slice))'
+                        + ' else '
+                        + value_rep
+                        + '['
+                        + slice_rep
+                        + '])'
+                    )
         return node
 
     def visit_Attribute(self, node):
@@ -263,8 +313,10 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def visit_Call(self, node):
         if isinstance(node.func, ast.Name) and node.func.id == 'EventDataset':
             if len(node.args) > 2:
-                raise TypeError('EventDataset() should have no more than two arguments, found '
-                                + str(len(node.args)))
+                raise TypeError(
+                    'EventDataset() should have no more than two arguments, found '
+                    + str(len(node.args))
+                )
             self._depth = 0
             if len(node.args) >= 1:
                 if hasattr(node.args[0], 'elts'):
@@ -273,32 +325,57 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                     urls = [node.args[0]]
                 urls = [ast.literal_eval(url) for url in urls]
                 urls = [url for url in urls if url is not None]
-                source_rep = (input_filenames_argument_name + ' '
-                              + 'if ' + input_filenames_argument_name + ' is not None '
-                              + 'else ' + repr(urls))
+                source_rep = (
+                    input_filenames_argument_name
+                    + ' '
+                    + 'if '
+                    + input_filenames_argument_name
+                    + ' is not None '
+                    + 'else '
+                    + repr(urls)
+                )
             else:
                 source_rep = input_filenames_argument_name
-            source_rep = ('(lambda source: [source] if isinstance(source, str) else source)('
-                          + source_rep + ')')
+            source_rep = (
+                '(lambda source: [source] if isinstance(source, str) else source)('
+                + source_rep
+                + ')'
+            )
             if len(node.args) >= 2:
                 local_tree_name_rep = self.get_rep(node.args[1])
             else:
-                local_tree_name_rep = ('(lambda key_array: '
-                                       + "key_array[key_array[:, 1] == 'TTree'][:, 0])("
-                                       + 'np.atleast_2d((lambda classnames:'
-                                       + ' np.hstack([list(classnames.keys()),'
-                                       + ' list(classnames.values())]))'
-                                       + '(uproot.open(' + source_rep + '[0]).classnames())'
-                                       + '))[0]')
-            tree_name_rep = (tree_name_argument_name + ' '
-                             + 'if ' + tree_name_argument_name + ' is not None '
-                             + 'else ' + local_tree_name_rep)
-            node.rep = ('(lambda input_files, tree_name_to_use: '
-                        + "(logging.getLogger(__name__).info('Using treename='"
-                        + ' + repr(tree_name_to_use)),'
-                        + ' uproot.lazy({input_file: tree_name_to_use'
-                        + ' for input_file in input_files}))[1])'
-                        + '(' + source_rep + ', ' + tree_name_rep + ')')
+                local_tree_name_rep = (
+                    '(lambda key_array: '
+                    + "key_array[key_array[:, 1] == 'TTree'][:, 0])("
+                    + 'np.atleast_2d((lambda classnames:'
+                    + ' np.hstack([list(classnames.keys()),'
+                    + ' list(classnames.values())]))'
+                    + '(uproot.open('
+                    + source_rep
+                    + '[0]).classnames())'
+                    + '))[0]'
+                )
+            tree_name_rep = (
+                tree_name_argument_name
+                + ' '
+                + 'if '
+                + tree_name_argument_name
+                + ' is not None '
+                + 'else '
+                + local_tree_name_rep
+            )
+            node.rep = (
+                '(lambda input_files, tree_name_to_use: '
+                + "(logging.getLogger(__name__).info('Using treename='"
+                + ' + repr(tree_name_to_use)),'
+                + ' uproot.lazy({input_file: tree_name_to_use'
+                + ' for input_file in input_files}))[1])'
+                + '('
+                + source_rep
+                + ', '
+                + tree_name_rep
+                + ')'
+            )
         else:
             if isinstance(node.func, ast.Attribute) and node.func.attr == 'ToFourMomenta':
                 func_rep = 'vector.awk'
@@ -311,11 +388,14 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
 
     def visit_Select(self, node):
         if type(node.selector) is not ast.Lambda:
-            raise TypeError('Argument to Select() must be a lambda function, found '
-                            + node.selector)
+            raise TypeError(
+                'Argument to Select() must be a lambda function, found ' + node.selector
+            )
         if len(node.selector.args.args) != 1:
-            raise TypeError('Lambda function in Select() must have exactly one argument, found '
-                            + len(node.selector.args.args))
+            raise TypeError(
+                'Lambda function in Select() must have exactly one argument, found '
+                + len(node.selector.args.args)
+            )
         self.visit(node.source)
         if self._depth in self._tuple_depths:
             at_tuple = True
@@ -327,46 +407,67 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         self._projection_stack.append(node.selector.args.args[0].arg)
         if self._depth > 2 and not at_tuple:
             rep1, rep2 = self._projection_stack[-2], self._projection_stack[-1]
-            lambda_node = ast.Lambda(args=ast.arguments(args=[ast.arg(arg=rep1),
-                                                              ast.arg(arg=rep2)]),
-                                     body=node.selector.body)
-            call_rep = (self.get_rep(lambda_node) + '(*ak.unzip(ak.cartesian(('
-                        + rep1 + ', ' + self.get_rep(node.source)
-                        + '), axis=' + repr(self._depth - 2) + ', nested=True)))')
+            lambda_node = ast.Lambda(
+                args=ast.arguments(args=[ast.arg(arg=rep1), ast.arg(arg=rep2)]),
+                body=node.selector.body,
+            )
+            call_rep = (
+                self.get_rep(lambda_node)
+                + '(*ak.unzip(ak.cartesian(('
+                + rep1
+                + ', '
+                + self.get_rep(node.source)
+                + '), axis='
+                + repr(self._depth - 2)
+                + ', nested=True)))'
+            )
         else:
             call_node = ast.Call(func=node.selector, args=[node.source])
             call_rep = self.get_rep(call_node)
-        select_rep = ('(lambda selection: ak.zip(selection,'
-                      + ' depth_limit=(None if len(selection) == 1 else ' + repr(self._depth)
-                      + '))' + ' if not isinstance(selection, ak.Array)'
-                      + ' else selection)(' + call_rep + ')')
+        select_rep = (
+            '(lambda selection: ak.zip(selection,'
+            + ' depth_limit=(None if len(selection) == 1 else '
+            + repr(self._depth)
+            + '))'
+            + ' if not isinstance(selection, ak.Array)'
+            + ' else selection)('
+            + call_rep
+            + ')'
+        )
         self._depth -= 1
         self._projection_stack.pop()
         if at_tuple:
-            node.rep = ('ak.zip([' + select_rep + ' for x in ak.unzip(' + original_source_rep
-                        + ')])')
+            node.rep = (
+                'ak.zip([' + select_rep + ' for x in ak.unzip(' + original_source_rep + ')])'
+            )
         else:
             node.rep = select_rep
         return node
 
     def visit_SelectMany(self, node):
         if type(node.selector) is not ast.Lambda:
-            raise TypeError('Argument to SelectMany() must be a lambda function, found '
-                            + node.selector)
+            raise TypeError(
+                'Argument to SelectMany() must be a lambda function, found ' + node.selector
+            )
         if len(node.selector.args.args) != 1:
-            raise TypeError('Lambda function in SelectMany() must have exactly one argument, '
-                            'found ' + len(node.selector.args.args))
+            raise TypeError(
+                'Lambda function in SelectMany() must have exactly one argument, '
+                'found ' + len(node.selector.args.args)
+            )
         self.visit_Select(node)
         node.rep = 'ak.flatten(' + node.rep + ', axis=' + repr(self._depth + 1) + ')'
         return node
 
     def visit_Where(self, node):
         if type(node.predicate) is not ast.Lambda:
-            raise TypeError('Argument to Where() must be a lambda function, found '
-                            + node.predicate)
+            raise TypeError(
+                'Argument to Where() must be a lambda function, found ' + node.predicate
+            )
         if len(node.predicate.args.args) != 1:
-            raise TypeError('Lambda function in Where() must have exactly one argument, found '
-                            + len(node.predicate.args.args))
+            raise TypeError(
+                'Lambda function in Where() must have exactly one argument, found '
+                + len(node.predicate.args.args)
+            )
         self.visit(node.source)
         self._depth += 1
         if sys.version_info[0] < 3:
@@ -377,9 +478,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             slice_node = ast.Index(node.predicate.body)
         else:
             slice_node = node.predicate.body
-        node.predicate.body = ast.Subscript(value=ast.Name(id=subscriptable),
-                                            slice=slice_node,
-                                            short_circuit=True)
+        node.predicate.body = ast.Subscript(
+            value=ast.Name(id=subscriptable), slice=slice_node, short_circuit=True
+        )
         call_node = ast.Call(func=node.predicate, args=[node.source])
         node.rep = self.get_rep(call_node)
         self._depth -= 1
@@ -397,14 +498,16 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
 
     def visit_Concat(self, node):
         tuple_node = ast.Tuple(elts=[node.first, node.second])
-        node.rep = ('ak.concatenate(' + self.get_rep(tuple_node)
-                    + ', axis=' + repr(self._depth) + ')')
+        node.rep = (
+            'ak.concatenate(' + self.get_rep(tuple_node) + ', axis=' + repr(self._depth) + ')'
+        )
         return node
 
     def visit_Zip(self, node):
         self.visit(node.source)
-        node.rep = ('ak.zip(' + self.get_rep(node.source)
-                    + ', depth_limit=' + repr(self._depth + 1) + ')')
+        node.rep = (
+            'ak.zip(' + self.get_rep(node.source) + ', depth_limit=' + repr(self._depth + 1) + ')'
+        )
         return node
 
     def visit_Count(self, node):
@@ -429,18 +532,29 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
 
     def visit_Choose(self, node):
         self.visit(node.source)
-        node.rep = ('ak.combinations(' + self.get_rep(node.source) + ', ' + self.get_rep(node.n)
-                    + ', axis=' + repr(self._depth) + ')')
+        node.rep = (
+            'ak.combinations('
+            + self.get_rep(node.source)
+            + ', '
+            + self.get_rep(node.n)
+            + ', axis='
+            + repr(self._depth)
+            + ')'
+        )
         self._tuple_depths.append(self._depth + 1)
         return node
 
     def visit_OrderBy(self, node, ascending=True):
         if type(node.key_selector) is not ast.Lambda:
-            raise TypeError('Argument to OrderBy() must be a lambda function, found '
-                            + str(type(node.key_selector)))
+            raise TypeError(
+                'Argument to OrderBy() must be a lambda function, found '
+                + str(type(node.key_selector))
+            )
         if len(node.key_selector.args.args) != 1:
-            raise TypeError('Lambda function in OrderBy() must have exactly one argument, found '
-                            + str(len(node.key_selector.args.args)))
+            raise TypeError(
+                'Lambda function in OrderBy() must have exactly one argument, found '
+                + str(len(node.key_selector.args.args))
+            )
         self.visit(node.source)
         self._depth += 1
         if sys.version_info[0] < 3:
@@ -449,16 +563,22 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             subscriptable = node.key_selector.args.args[0].arg
         self.visit(node.key_selector)
         delattr(node.key_selector, 'rep')
-        node.key_selector.body.rep = ('ak.argsort(' + self.get_rep(node.key_selector.body)
-                                      + ', axis=' + repr(self._depth - 1)
-                                      + ', ascending=' + str(ascending) + ')')
+        node.key_selector.body.rep = (
+            'ak.argsort('
+            + self.get_rep(node.key_selector.body)
+            + ', axis='
+            + repr(self._depth - 1)
+            + ', ascending='
+            + str(ascending)
+            + ')'
+        )
         if sys.version_info[0] < 3 or (sys.version_info[0] == 3 and sys.version_info[1] < 9):
             slice_node = ast.Index(node.key_selector.body)
         else:
             slice_node = node.key_selector.body
-        node.key_selector.body = ast.Subscript(value=ast.Name(id=subscriptable),
-                                               slice=slice_node,
-                                               short_circuit=True)
+        node.key_selector.body = ast.Subscript(
+            value=ast.Name(id=subscriptable), slice=slice_node, short_circuit=True
+        )
         call_node = ast.Call(func=node.key_selector, args=[node.source])
         node.rep = self.get_rep(call_node)
         self._depth -= 1
@@ -466,11 +586,16 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
 
     def visit_OrderByDescending(self, node):
         if type(node.key_selector) is not ast.Lambda:
-            raise TypeError('Argument to OrderByDescending() must be a lambda function, found '
-                            + str(type(node.key_selector)))
+            raise TypeError(
+                'Argument to OrderByDescending() must be a lambda function, found '
+                + str(type(node.key_selector))
+            )
         if len(node.key_selector.args.args) != 1:
-            raise TypeError('Lambda function in OrderByDescending() must have exactly one'
-                            + 'argument, found ' + str(len(node.key_selector.args.args)))
+            raise TypeError(
+                'Lambda function in OrderByDescending() must have exactly one'
+                + 'argument, found '
+                + str(len(node.key_selector.args.args))
+            )
         node = self.visit_OrderBy(node, ascending=False)
         return node
 
@@ -479,13 +604,27 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def visit_ElementAt(self, node):
-        node.rep = (self.get_rep(node.source) + '[' + ':, ' * self._depth
-                    + self.get_rep(node.index) + ']')
+        node.rep = (
+            self.get_rep(node.source) + '[' + ':, ' * self._depth + self.get_rep(node.index) + ']'
+        )
         return node
 
     def visit_Contains(self, node):
         tuple_rep = self.get_rep(ast.Tuple(elts=[node.value, node.source]))
-        comparator_rep = '*ak.unzip(ak.cartesian(' + tuple_rep + ',  axis=' + repr(self._depth - 1) + ', nested=True)) if isinstance(' + self.get_rep(node.value) + ', ak.Array) and getattr(' + self.get_rep(node.value) + ", 'ndim') >= getattr(" + self.get_rep(node.source) + ", 'ndim') else " + tuple_rep
+        comparator_rep = (
+            '*ak.unzip(ak.cartesian('
+            + tuple_rep
+            + ',  axis='
+            + repr(self._depth - 1)
+            + ', nested=True)) if isinstance('
+            + self.get_rep(node.value)
+            + ', ak.Array) and getattr('
+            + self.get_rep(node.value)
+            + ", 'ndim') >= getattr("
+            + self.get_rep(node.source)
+            + ", 'ndim') else "
+            + tuple_rep
+        )
         compare_rep = '(lambda x, y: x == y)(' + comparator_rep + ')'
         node.rep = 'ak.any(' + compare_rep + ', axis=' + repr(self._depth) + ')'
         return node
