@@ -94,8 +94,8 @@ def test_comparison_ops():
     assert_identical_source('(1 >= 2)')
     assert_identical_source('(1 is 2)')
     assert_identical_source('(1 is not 2)')
-    assert_identical_source('(1 in [2])')
-    assert_identical_source('(1 not in [2])')
+    assert_modified_source('(1 in [2])', 'functools.reduce(np.logical_or, [(2 == 1)])')
+    assert_modified_source('(1 not in [2])', 'np.logical_not(functools.reduce(np.logical_or, [(2 == 1)]))')
     assert_modified_source('(1 < 2 < 3)', '((1 < 2) & (2 < 3))')
     assert_modified_source('(1 < 2 < 3 < 4)', '((1 < 2) & (2 < 3) & (3 < 4))')
 
