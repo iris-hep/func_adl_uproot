@@ -57,6 +57,15 @@ def test_ast_executor_list_without_treename():
     ]
 
 
+def test_ast_executor_select_number():
+    python_source = (
+        "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+        + " lambda row: 2)"
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [2, 2]
+
+
 def test_ast_executor_select_scalar_branch_subscript():
     python_source = (
         "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
@@ -179,6 +188,24 @@ def test_ast_executor_select_vector_branch():
     python_source = (
         "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
         + ' lambda row: row.int_vector_branch)'
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [[], [-1, 2, 3], [13]]
+
+
+def test_ast_executor_select_vector_branch_number():
+    python_source = (
+        "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + " lambda row: row.int_vector_branch.Select(lambda int_value: 2))"
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [[], [2, 2, 2], [2]]
+
+
+def test_ast_executor_select_vector_branch_element():
+    python_source = (
+        "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + " lambda row: row.int_vector_branch.Select(lambda int_value: int_value))"
     )
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [[], [-1, 2, 3], [13]]
