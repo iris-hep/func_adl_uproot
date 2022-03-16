@@ -1,7 +1,7 @@
 import ast
 import sys
 
-from qastle import Select
+from qastle import Contains, Select
 
 
 input_filenames_argument_name = 'input_filenames'
@@ -155,7 +155,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             raise SyntaxError('Unimplemented boolean operation: ' + node.op)
         bool_op_func = bool_op_dict[type(node.op)]
         node.rep = (
-            bool_op_func + '(' + ', '.join([self.get_rep(value) for value in node.values]) + ')'
+            'functools.reduce('
+            + bool_op_func
+            + ', ['
+            + ', '.join([self.get_rep(value) for value in node.values])
+            + '])'
         )
         return node
 
@@ -163,12 +167,20 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         comparison_reps = []
         full_comparators = [node.left] + node.comparators
         for left, operator, right in zip(full_comparators[:-1], node.ops, full_comparators[1:]):
-            if type(operator) not in compare_op_dict:
-                raise SyntaxError('Unimplemented comparison operation: ' + operator)
-            left_rep = self.get_rep(left)
-            operator_rep = compare_op_dict[type(operator)]
-            right_rep = self.get_rep(right)
-            comparison_reps.append('(' + left_rep + ' ' + operator_rep + ' ' + right_rep + ')')
+            if isinstance(operator, ast.In):
+                contains_node = Contains(source=right, value=left)
+                comparison_reps.append(self.get_rep(contains_node))
+            elif isinstance(operator, ast.NotIn):
+                contains_node = Contains(source=right, value=left)
+                not_node = ast.UnaryOp(op=ast.Not(), operand=contains_node)
+                comparison_reps.append(self.get_rep(not_node))
+            else:
+                if type(operator) not in compare_op_dict:
+                    raise SyntaxError('Unimplemented comparison operation: ' + operator)
+                left_rep = self.get_rep(left)
+                operator_rep = compare_op_dict[type(operator)]
+                right_rep = self.get_rep(right)
+                comparison_reps.append('(' + left_rep + ' ' + operator_rep + ' ' + right_rep + ')')
         node.rep = ' & '.join(comparison_reps)
         if len(node.ops) > 1:
             node.rep = '(' + node.rep + ')'
@@ -610,23 +622,42 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def visit_Contains(self, node):
-        tuple_rep = self.get_rep(ast.Tuple(elts=[node.value, node.source]))
-        comparator_rep = (
-            '*ak.unzip(ak.cartesian('
-            + tuple_rep
-            + ',  axis='
-            + repr(self._depth - 1)
-            + ', nested=True)) if isinstance('
-            + self.get_rep(node.value)
-            + ', ak.Array) and getattr('
-            + self.get_rep(node.value)
-            + ", 'ndim') >= getattr("
-            + self.get_rep(node.source)
-            + ", 'ndim') else "
-            + tuple_rep
-        )
-        compare_rep = '(lambda x, y: x == y)(' + comparator_rep + ')'
-        node.rep = 'ak.any(' + compare_rep + ', axis=' + repr(self._depth) + ')'
+        if isinstance(node.source, (ast.List, ast.Tuple)):
+            comparison_nodes = [
+                ast.Compare(left=elt, ops=[ast.Eq()], comparators=[node.value])
+                for elt in node.source.elts
+            ]
+            or_node = ast.BoolOp(op=ast.Or(), values=comparison_nodes)
+            node.rep = self.get_rep(or_node)
+        elif isinstance(node.value, (ast.List, ast.Tuple)):
+            comparison_nodes = ast.List(
+                elts=[
+                    ast.Compare(left=elt, ops=[ast.Eq()], comparators=[node.source])
+                    for elt in node.value.elts
+                ]
+            )
+            or_node = ast.BoolOp(op=ast.Or(), values=comparison_nodes)
+            node.rep = self.get_rep(or_node)
+        else:
+            tuple_rep = self.get_rep(ast.Tuple(elts=[node.value, node.source]))
+            comparators_rep = (
+                '*ak.unzip(ak.cartesian('
+                + tuple_rep
+                + ',  axis='
+                + repr(self._depth - 1)
+                + ', nested=True)) if isinstance('
+                + self.get_rep(node.value)
+                + ', ak.Array) and isinstance('
+                + self.get_rep(node.source)
+                + ', ak.Array) and getattr('
+                + self.get_rep(node.value)
+                + ", 'ndim') >= getattr("
+                + self.get_rep(node.source)
+                + ", 'ndim') else "
+                + tuple_rep
+            )
+            compare_rep = '(lambda x, y: x == y)(' + comparators_rep + ')'
+            node.rep = 'ak.any(' + compare_rep + ', axis=' + repr(self._depth) + ')'
         return node
 
     def visit_Last(self, node):
