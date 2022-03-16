@@ -155,7 +155,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             raise SyntaxError('Unimplemented boolean operation: ' + node.op)
         bool_op_func = bool_op_dict[type(node.op)]
         node.rep = (
-            'functools.reduce(' + bool_op_func + ', [' + ', '.join([self.get_rep(value) for value in node.values]) + '])'
+            'functools.reduce('
+            + bool_op_func
+            + ', ['
+            + ', '.join([self.get_rep(value) for value in node.values])
+            + '])'
         )
         return node
 
@@ -619,11 +623,19 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
 
     def visit_Contains(self, node):
         if isinstance(node.source, (ast.List, ast.Tuple)):
-            comparison_nodes = [ast.Compare(left=elt, ops=[ast.Eq()], comparators=[node.value]) for elt in node.source.elts]
+            comparison_nodes = [
+                ast.Compare(left=elt, ops=[ast.Eq()], comparators=[node.value])
+                for elt in node.source.elts
+            ]
             or_node = ast.BoolOp(op=ast.Or(), values=comparison_nodes)
             node.rep = self.get_rep(or_node)
         elif isinstance(node.value, (ast.List, ast.Tuple)):
-            comparison_nodes = ast.List(elts=[ast.Compare(left=elt, ops=[ast.Eq()], comparators=[node.source]) for elt in node.value.elts])
+            comparison_nodes = ast.List(
+                elts=[
+                    ast.Compare(left=elt, ops=[ast.Eq()], comparators=[node.source])
+                    for elt in node.value.elts
+                ]
+            )
             or_node = ast.BoolOp(op=ast.Or(), values=comparison_nodes)
             node.rep = self.get_rep(or_node)
         else:
@@ -635,7 +647,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 + repr(self._depth - 1)
                 + ', nested=True)) if isinstance('
                 + self.get_rep(node.value)
-                + ', ak.Array) and isinstance(' + self.get_rep(node.source) + ', ak.Array) and getattr('
+                + ', ak.Array) and isinstance('
+                + self.get_rep(node.source)
+                + ', ak.Array) and getattr('
                 + self.get_rep(node.value)
                 + ", 'ndim') >= getattr("
                 + self.get_rep(node.source)

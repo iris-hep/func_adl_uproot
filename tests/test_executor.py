@@ -728,29 +728,37 @@ def test_ast_executor_concat():
 
 
 def test_ast_executor_select_scalar_branch_in():
-    python_source = ("Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
-                     + 'lambda row: row.int_branch in [0, 1])')
+    python_source = (
+        "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+        + 'lambda row: row.int_branch in [0, 1])'
+    )
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [True, False]
 
 
 def test_ast_executor_select_in_vector_branch():
-    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
-                     + ' lambda row: 3 in row.int_vector_branch)')
+    python_source = (
+        "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + ' lambda row: 3 in row.int_vector_branch)'
+    )
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [False, True, False]
 
 
 def test_ast_executor_select_scalar_branch_in_vector_branch():
-    python_source = ("Select(EventDataset('tests/scalars_and_vectors_tree_file.root', 'tree'),"
-                     + ' lambda row: row.int_branch + 1 in row.int_vector_branch)')
+    python_source = (
+        "Select(EventDataset('tests/scalars_and_vectors_tree_file.root', 'tree'),"
+        + ' lambda row: row.int_branch + 1 in row.int_vector_branch)'
+    )
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [False, False, True]
 
 
 def test_ast_executor_select_scalar_vector_branch_in():
-    python_source = ("Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
-                     + ' lambda row: row.int_vector_branch'
-                     + '.Select(lambda int_value: int_value in [-1, 13]))')
+    python_source = (
+        "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + ' lambda row: row.int_vector_branch'
+        + '.Select(lambda int_value: int_value in [-1, 13]))'
+    )
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [[], [True, False, False], [True]]

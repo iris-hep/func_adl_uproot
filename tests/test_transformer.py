@@ -80,9 +80,13 @@ def test_binary_ops():
 
 def test_boolean_ops():
     assert_modified_source('True and False', 'functools.reduce(np.logical_and, [True, False])')
-    assert_modified_source('True and False and False', 'functools.reduce(np.logical_and, [True, False, False])')
+    assert_modified_source(
+        'True and False and False', 'functools.reduce(np.logical_and, [True, False, False])'
+    )
     assert_modified_source('True or False', 'functools.reduce(np.logical_or, [True, False])')
-    assert_modified_source('True or False or False', 'functools.reduce(np.logical_or, [True, False, False])')
+    assert_modified_source(
+        'True or False or False', 'functools.reduce(np.logical_or, [True, False, False])'
+    )
 
 
 def test_comparison_ops():
@@ -95,7 +99,9 @@ def test_comparison_ops():
     assert_identical_source('(1 is 2)')
     assert_identical_source('(1 is not 2)')
     assert_modified_source('(1 in [2])', 'functools.reduce(np.logical_or, [(2 == 1)])')
-    assert_modified_source('(1 not in [2])', 'np.logical_not(functools.reduce(np.logical_or, [(2 == 1)]))')
+    assert_modified_source(
+        '(1 not in [2])', 'np.logical_not(functools.reduce(np.logical_or, [(2 == 1)]))'
+    )
     assert_modified_source('(1 < 2 < 3)', '((1 < 2) & (2 < 3))')
     assert_modified_source('(1 < 2 < 3 < 4)', '((1 < 2) & (2 < 3) & (3 < 4))')
 
