@@ -418,7 +418,13 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         self._depth += 1
         self._projection_stack.append(node.selector.args.args[0].arg)
         if isinstance(node.selector.body, (ast.Constant, ast.Num, ast.Str)):
-            node.selector.body.rep = 'ak.broadcast_arrays(' + self.get_rep(node.selector.body) + ', ak.unzip(' + node.selector.args.args[0].arg + ')[0])[0]'
+            node.selector.body.rep = (
+                'ak.broadcast_arrays('
+                + self.get_rep(node.selector.body)
+                + ', ak.unzip('
+                + node.selector.args.args[0].arg
+                + ')[0])[0]'
+            )
         if self._depth > 2 and not at_tuple:
             rep1, rep2 = self._projection_stack[-2], self._projection_stack[-1]
             lambda_node = ast.Lambda(
