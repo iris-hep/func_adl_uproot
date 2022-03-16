@@ -155,7 +155,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             raise SyntaxError('Unimplemented boolean operation: ' + node.op)
         bool_op_func = bool_op_dict[type(node.op)]
         node.rep = (
-            bool_op_func + '(' + ', '.join([self.get_rep(value) for value in node.values]) + ')'
+            'functools.reduce(' + bool_op_func + ', [' + ', '.join([self.get_rep(value) for value in node.values]) + '])'
         )
         return node
 

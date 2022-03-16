@@ -79,8 +79,10 @@ def test_binary_ops():
 
 
 def test_boolean_ops():
-    assert_modified_source('True and False', 'np.logical_and(True, False)')
-    assert_modified_source('True or False', 'np.logical_or(True, False)')
+    assert_modified_source('True and False', 'functools.reduce(np.logical_and, [True, False])')
+    assert_modified_source('True and False and False', 'functools.reduce(np.logical_and, [True, False, False])')
+    assert_modified_source('True or False', 'functools.reduce(np.logical_or, [True, False])')
+    assert_modified_source('True or False or False', 'functools.reduce(np.logical_or, [True, False, False])')
 
 
 def test_comparison_ops():
