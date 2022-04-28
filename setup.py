@@ -13,7 +13,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(exclude=['tests']),
-    python_requires=('>=3.6, <3.11'),
+    python_requires=('>=3.7, <3.11'),
     install_requires=[
         'awkward>=1.2',
         'func-adl>=2.2.1',
