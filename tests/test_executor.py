@@ -432,6 +432,16 @@ def test_ast_executor_select_of_choose():
     assert ast_executor(python_ast).tolist() == [[], [1, 2, 5], []]
 
 
+def test_ast_executor_sum_in_select_of_choose():
+    python_source = (
+        "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + 'lambda row: row.int_vector_branch.Choose(2)'
+        + '.Select(lambda pair: pair.Sum()))'
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [[], [1, 2, 5], []]
+
+
 def test_ast_executor_choose_zipped_dict():
     python_source = (
         "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"

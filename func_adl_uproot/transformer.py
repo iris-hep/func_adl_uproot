@@ -530,24 +530,34 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         )
         return node
 
-    def visit_Count(self, node):
+    def _aggregate_helper(self, node):
         self.visit(node.source)
-        node.rep = 'ak.num(' + self.get_rep(node.source) + ', axis=' + repr(self._depth) + ')'
+        if self._depth in self._tuple_depths:
+            source_rep = 'ak.unzip(' + self.get_rep(node.source) + ')'
+            depth = 0
+        else:
+            source_rep = self.get_rep(node.source)
+            depth = self._depth
+        return source_rep, depth
+
+    def visit_Count(self, node):
+        source_rep, depth = self._aggregate_helper(node)
+        node.rep = 'ak.num(' + source_rep + ', axis=' + repr(depth) + ')'
         return node
 
     def visit_Min(self, node):
-        self.visit(node.source)
-        node.rep = 'ak.min(' + self.get_rep(node.source) + ', axis=' + repr(self._depth) + ')'
+        source_rep, depth = self._aggregate_helper(node)
+        node.rep = 'ak.min(' + source_rep + ', axis=' + repr(depth) + ')'
         return node
 
     def visit_Max(self, node):
-        self.visit(node.source)
-        node.rep = 'ak.max(' + self.get_rep(node.source) + ', axis=' + repr(self._depth) + ')'
+        source_rep, depth = self._aggregate_helper(node)
+        node.rep = 'ak.max(' + source_rep + ', axis=' + repr(depth) + ')'
         return node
 
     def visit_Sum(self, node):
-        self.visit(node.source)
-        node.rep = 'ak.sum(' + self.get_rep(node.source) + ', axis=' + repr(self._depth) + ')'
+        source_rep, depth = self._aggregate_helper(node)
+        node.rep = 'ak.sum(' + source_rep + ', axis=' + repr(depth) + ')'
         return node
 
     def visit_Choose(self, node):

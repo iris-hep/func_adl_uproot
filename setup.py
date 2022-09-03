@@ -15,7 +15,7 @@ setuptools.setup(
     packages=setuptools.find_packages(exclude=['tests']),
     python_requires=('>=3.7, <3.11'),
     install_requires=[
-        'awkward>=1.2',
+        'awkward>=1.9.0',
         'func-adl>=2.2.1',
         'numpy',
         'qastle>=0.15.0',
