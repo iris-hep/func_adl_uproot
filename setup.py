@@ -18,7 +18,7 @@ setuptools.setup(
         'awkward>=1.9.0',
         'func-adl>=3.1',
         'numpy',
-        'qastle>=0.15.0',
+        'qastle>=0.16.0',
         'uproot>=4.1.3',
         'vector',
     ],
