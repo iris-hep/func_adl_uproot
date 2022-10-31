@@ -13,10 +13,10 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(exclude=['tests']),
-    python_requires=('>=3.7, <3.11'),
+    python_requires=('>=3.7, <3.12'),
     install_requires=[
         'awkward>=1.9.0',
-        'func-adl>=2.2.1',
+        'func-adl>=3.1',
         'numpy',
         'qastle>=0.15.0',
         'uproot>=4.1.3',
