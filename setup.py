@@ -15,11 +15,11 @@ setuptools.setup(
     packages=setuptools.find_packages(exclude=['tests']),
     python_requires=('>=3.7, <3.12'),
     install_requires=[
-        'awkward>=1.9.0',
+        'awkward>=1.9.0,<2',
         'func-adl>=3.1',
         'numpy',
         'qastle>=0.16.0',
-        'uproot>=4.1.3',
+        'uproot>=4.1.3,<5',
         'vector',
     ],
     extras_require={'test': ['flake8', 'pytest', 'pytest-cov']},
