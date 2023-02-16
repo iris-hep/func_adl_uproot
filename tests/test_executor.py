@@ -532,6 +532,30 @@ def test_ast_executor_orderby_negative_scalar_branch():
     assert ast_executor(python_ast).tolist() == [0, -1]
 
 
+def test_ast_executor_orderby_same_vector_branch():
+    python_source = (
+        "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + 'lambda row: row.int_vector_branch.OrderBy(lambda int_value: int_value))'
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [[], [-1, 2, 3], [13]]
+
+
+def test_ast_executor_orderby_different_vector_branch():
+    python_source = (
+        "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + "lambda row: Zip({'int': row.int_vector_branch"
+        + ", 'float': row.float_vector_branch})"
+        + '.OrderBy(lambda elements: elements.int)'
+        + '.Select(lambda elements: elements.float))'
+    )
+    python_ast = ast.parse(python_source)
+    result = ast_executor(python_ast)
+    assert np.allclose(result[0].tolist(), [])
+    assert np.allclose(result[1].tolist(), [-7.7, 8.8, 9.9])
+    assert np.allclose(result[2].tolist(), [15.15])
+
+
 def test_ast_executor_orderby_negative_vector_branch():
     python_source = (
         "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
@@ -556,13 +580,22 @@ def test_ast_executor_orderby_different_negative_vector_branch():
     assert np.allclose(result[2].tolist(), [15.15])
 
 
-def test_ast_executor_orderbydescending():
+def test_ast_executor_orderbydescending_scalar_branch():
     python_source = (
         "OrderByDescending(EventDataset('tests/scalars_tree_file.root', 'tree'),"
         + 'lambda row: row.int_branch).Select(lambda row: row.int_branch)'
     )
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [0, -1]
+
+
+def test_ast_executor_orderbydescending_vector_branch():
+    python_source = (
+        "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + 'lambda row: row.int_vector_branch.OrderByDescending(lambda int_value: int_value))'
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [[], [3, 2, -1], [13]]
 
 
 def test_ast_executor_empty_branch():
@@ -796,3 +829,9 @@ def test_ast_executor_select_scalar_vector_branch_in():
     )
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [[], [True, False, False], [True]]
+
+
+def test_ast_executor_ternary_operator():
+    python_source = "Select(EventDataset('tests/scalars_tree_file.root', 'tree'), lambda row: 1 if row.int_branch >= 0 else 2)"
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [1, 2]
