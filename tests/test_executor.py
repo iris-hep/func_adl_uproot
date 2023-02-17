@@ -779,7 +779,7 @@ def test_ast_executor_any_scalar_branch_true():
 def test_ast_executor_any_vector_branch():
     python_source = (
         "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
-        + 'lambda row: row.int_vector_branch.Any(lambda int_value: int_value > 0))'
+        + ' lambda row: row.int_vector_branch.Any(lambda int_value: int_value > 0))'
     )
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [False, True, True]
@@ -832,6 +832,9 @@ def test_ast_executor_select_scalar_vector_branch_in():
 
 
 def test_ast_executor_ternary_operator():
-    python_source = "Select(EventDataset('tests/scalars_tree_file.root', 'tree'), lambda row: 1 if row.int_branch >= 0 else 2)"
+    python_source = (
+        "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+        + ' lambda row: 1 if row.int_branch >= 0 else 2)'
+    )
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [1, 2]
