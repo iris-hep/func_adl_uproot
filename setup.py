@@ -13,7 +13,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(exclude=['tests']),
-    python_requires=('>=3.7, <3.12'),
+    python_requires=('>=3.8, <3.12'),
     install_requires=[
         'awkward>=2.0.8',
         'dask[complete]',
