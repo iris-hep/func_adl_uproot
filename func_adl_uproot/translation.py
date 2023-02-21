@@ -25,8 +25,9 @@ def generate_python_source(ast, function_name='run_query'):
         + tree_name_argument_name
         + '=None):\n'
     )
-    source += '    import functools, logging, numpy as np, awkward as ak, uproot, vector\n'
-    source += '    return ' + python_ast_to_python_source(python_ast) + '\n'
+    source += '    import functools, logging, numpy as np, dask_awkward as dak, uproot, vector\n'
+    source += '    vector.register_awkward()\n'
+    source += '    return ' + python_ast_to_python_source(python_ast) + '.compute()\n'
     return source
 
 

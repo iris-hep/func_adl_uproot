@@ -107,29 +107,35 @@ def test_comparison_ops():
 
 
 def test_conditional():
-    assert_modified_source('1 if True else 0', 'ak.where(True, 1, 0)')
+    assert_modified_source(
+        '1 if True else 0',
+        (
+            'dak.where(True, dak.full_like(dak.unzip(True)[0], 1, dtype=type(1)),'
+            + ' dak.full_like(dak.unzip(True)[0], 0, dtype=type(0)))'
+        ),
+    )
 
 
 def test_subscripts():
     assert_identical_source("abs['a']")
     assert_modified_source(
-        'abs[0]', ('(abs[abs.fields[0]]' + ' if isinstance(abs, ak.Array) else abs[0])')
+        'abs[0]', ('(abs[abs.fields[0]]' + ' if isinstance(abs, dak.Array) else abs[0])')
     )
     assert_modified_source(
         'abs[abs]',
         (
             '(abs[abs.fields[abs]]'
-            + ' if isinstance(abs, ak.Array)'
+            + ' if isinstance(abs, dak.Array)'
             + ' and (isinstance(abs, int) or isinstance(abs, slice))'
             + ' else abs[abs])'
         ),
     )
     assert_modified_source(
-        'abs[:]', ('(abs[abs.fields[:]]' + ' if isinstance(abs, ak.Array) else abs[:])')
+        'abs[:]', ('(abs[abs.fields[:]]' + ' if isinstance(abs, dak.Array) else abs[:])')
     )
     assert_modified_source(
         'abs[1:4:2]',
-        ('(abs[abs.fields[1:4:2]]' + ' if isinstance(abs, ak.Array) else abs[1:4:2])'),
+        ('(abs[abs.fields[1:4:2]]' + ' if isinstance(abs, dak.Array) else abs[1:4:2])'),
     )
 
 
