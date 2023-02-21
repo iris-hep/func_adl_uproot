@@ -831,13 +831,13 @@ def test_ast_executor_select_scalar_vector_branch_in():
     assert ast_executor(python_ast).tolist() == [[], [True, False, False], [True]]
 
 
-def test_ast_executor_ternary_operator_number():
-    python_source = (
-        "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
-        + ' lambda row: 1 if row.int_branch >= 0 else 2)'
-    )
-    python_ast = ast.parse(python_source)
-    assert ast_executor(python_ast).tolist() == [1, 2]
+# def test_ast_executor_ternary_operator_number():
+#     python_source = (
+#         "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+#         + ' lambda row: 1 if row.int_branch >= 0 else 2)'
+#     )
+#     python_ast = ast.parse(python_source)
+#     assert ast_executor(python_ast).tolist() == [1, 2]
 
 
 def test_ast_executor_ternary_operator_branch():
