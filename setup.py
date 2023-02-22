@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name='func_adl_uproot',
-    version='1.10.1',
+    version='2.0.0rc1',
     description=(
         'Functional Analysis Description Language'
         + ' uproot backend for accessing flat ROOT ntuples'
@@ -13,13 +13,15 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(exclude=['tests']),
-    python_requires=('>=3.7, <3.12'),
+    python_requires=('>=3.8, <3.12'),
     install_requires=[
-        'awkward>=1.9.0,<2',
+        'awkward>=2.0.8',
+        'dask[complete]',
+        'dask-awkward>=2023.2.0',
         'func-adl>=3.1',
         'numpy',
         'qastle>=0.16.0',
-        'uproot>=4.1.3,<5',
+        'uproot>=5',
         'vector',
     ],
     extras_require={'test': ['flake8', 'pytest', 'pytest-cov']},

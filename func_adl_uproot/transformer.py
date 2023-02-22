@@ -186,11 +186,31 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             node.rep = '(' + node.rep + ')'
         return node
 
+    def _broadcast_value(self, array_node, value_node):
+        if isinstance(value_node, (ast.Constant, ast.Num, ast.Str)):
+            value_node.rep = (
+                'dak.full_like(dak.unzip('
+                + self.get_rep(array_node)
+                + ')[0], '
+                + self.get_rep(value_node)
+                + ', dtype=type('
+                + self.get_rep(value_node)
+                + '))'
+            )
+        return value_node
+
     def visit_IfExp(self, node):
-        body_rep = self.get_rep(node.body)
-        test_rep = self.get_rep(node.test)
-        orelse_rep = self.get_rep(node.orelse)
-        node.rep = 'ak.where(' + test_rep + ', ' + body_rep + ', ' + orelse_rep + ')'
+        node.body = self._broadcast_value(node.test, node.body)
+        node.orelse = self._broadcast_value(node.test, node.orelse)
+        node.rep = (
+            'dak.where('
+            + self.get_rep(node.test)
+            + ', '
+            + self.get_rep(node.body)
+            + ', '
+            + self.get_rep(node.orelse)
+            + ')'
+        )
         return node
 
     def visit_Index(self, node):
@@ -227,7 +247,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                     + ']]'
                     + ' if isinstance('
                     + value_rep
-                    + ', ak.Array)'
+                    + ', dak.Array)'
                     + ' else '
                     + value_rep
                     + '['
@@ -260,7 +280,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                             + ']]'
                             + ' if isinstance('
                             + value_rep
-                            + ', ak.Array)'
+                            + ', dak.Array)'
                             + ' else '
                             + value_rep
                             + '['
@@ -280,7 +300,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                         + ']]'
                         + ' if isinstance('
                         + value_rep
-                        + ', ak.Array)'
+                        + ', dak.Array)'
                         + ' and (isinstance('
                         + slice_rep
                         + ', int)'
@@ -380,7 +400,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 '(lambda input_files, tree_name_to_use: '
                 + "(logging.getLogger(__name__).info('Using treename='"
                 + ' + repr(tree_name_to_use)),'
-                + ' uproot.lazy({input_file: tree_name_to_use'
+                + ' uproot.dask({input_file: tree_name_to_use'
                 + ' for input_file in input_files}))[1])'
                 + '('
                 + source_rep
@@ -390,12 +410,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             )
         else:
             if isinstance(node.func, ast.Attribute) and node.func.attr == 'ToFourMomenta':
-                func_rep = 'vector.awk'
-                node.args.append(node.func.value)
+                node.rep = 'dak.with_name(' + self.get_rep(node.func.value) + ", 'Momentum4D')"
             else:
                 func_rep = self.get_rep(node.func)
-            args_rep = ', '.join(self.get_rep(arg) for arg in node.args)
-            node.rep = func_rep + '(' + args_rep + ')'
+                args_rep = ', '.join(self.get_rep(arg) for arg in node.args)
+                node.rep = func_rep + '(' + args_rep + ')'
         return node
 
     def visit_Select(self, node):
@@ -417,14 +436,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             at_tuple = False
         self._depth += 1
         self._projection_stack.append(node.selector.args.args[0].arg)
-        if isinstance(node.selector.body, (ast.Constant, ast.Num, ast.Str)):
-            node.selector.body.rep = (
-                'ak.broadcast_arrays('
-                + self.get_rep(node.selector.body)
-                + ', ak.unzip('
-                + node.selector.args.args[0].arg
-                + ')[0])[0]'
-            )
+        node.selector.body = self._broadcast_value(node.selector.args.args[0], node.selector.body)
         if self._depth > 2 and not at_tuple:
             rep1, rep2 = self._projection_stack[-2], self._projection_stack[-1]
             lambda_node = ast.Lambda(
@@ -433,7 +445,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             )
             call_rep = (
                 self.get_rep(lambda_node)
-                + '(*ak.unzip(ak.cartesian(('
+                + '(*dak.unzip(dak.cartesian(('
                 + rep1
                 + ', '
                 + self.get_rep(node.source)
@@ -445,11 +457,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             call_node = ast.Call(func=node.selector, args=[node.source])
             call_rep = self.get_rep(call_node)
         select_rep = (
-            '(lambda selection: ak.zip(selection,'
+            '(lambda selection: dak.zip(selection,'
             + ' depth_limit=(None if len(selection) == 1 else '
             + repr(self._depth)
             + '))'
-            + ' if not isinstance(selection, ak.Array)'
+            + ' if not isinstance(selection, dak.Array)'
             + ' else selection)('
             + call_rep
             + ')'
@@ -458,7 +470,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         self._projection_stack.pop()
         if at_tuple:
             node.rep = (
-                'ak.zip([' + select_rep + ' for x in ak.unzip(' + original_source_rep + ')])'
+                'dak.zip([' + select_rep + ' for x in dak.unzip(' + original_source_rep + ')])'
             )
         else:
             node.rep = select_rep
@@ -475,7 +487,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 'found ' + len(node.selector.args.args)
             )
         self.visit_Select(node)
-        node.rep = 'ak.flatten(' + node.rep + ', axis=' + repr(self._depth + 1) + ')'
+        node.rep = 'dak.flatten(' + node.rep + ', axis=' + repr(self._depth + 1) + ')'
         return node
 
     def visit_Where(self, node):
@@ -508,62 +520,68 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
 
     def visit_All(self, node):
         select_node = Select(source=node.source, selector=node.predicate)
-        node.rep = 'ak.all(' + self.get_rep(select_node) + ', axis=' + repr(self._depth) + ')'
+        node.rep = 'dak.all(' + self.get_rep(select_node) + ', axis=' + repr(self._depth) + ')'
         return node
 
     def visit_Any(self, node):
         select_node = Select(source=node.source, selector=node.predicate)
-        node.rep = 'ak.any(' + self.get_rep(select_node) + ', axis=' + repr(self._depth) + ')'
+        node.rep = 'dak.any(' + self.get_rep(select_node) + ', axis=' + repr(self._depth) + ')'
         return node
 
     def visit_Concat(self, node):
         tuple_node = ast.Tuple(elts=[node.first, node.second])
         node.rep = (
-            'ak.concatenate(' + self.get_rep(tuple_node) + ', axis=' + repr(self._depth) + ')'
+            'dak.concatenate(' + self.get_rep(tuple_node) + ', axis=' + repr(self._depth) + ')'
         )
         return node
 
     def visit_Zip(self, node):
         self.visit(node.source)
         node.rep = (
-            'ak.zip(' + self.get_rep(node.source) + ', depth_limit=' + repr(self._depth + 1) + ')'
+            'dak.zip(' + self.get_rep(node.source) + ', depth_limit=' + repr(self._depth + 1) + ')'
         )
         return node
 
     def _aggregate_helper(self, node):
         self.visit(node.source)
         if self._depth in self._tuple_depths:
-            source_rep = 'ak.unzip(' + self.get_rep(node.source) + ')'
-            depth = 0
+            source_rep = (
+                'dak.concatenate([dak.singletons(i, axis='
+                + str(self._depth - 1)
+                + ') for i in dak.unzip('
+                + self.get_rep(node.source)
+                + ')], axis='
+                + str(self._depth)
+                + ')'
+            )
         else:
             source_rep = self.get_rep(node.source)
-            depth = self._depth
-        return source_rep, depth
+        return source_rep
 
     def visit_Count(self, node):
-        source_rep, depth = self._aggregate_helper(node)
-        node.rep = 'ak.num(' + source_rep + ', axis=' + repr(depth) + ')'
+        source_rep = self._aggregate_helper(node)
+        node.rep = 'dak.num(' + source_rep + ', axis=' + repr(self._depth) + ')'
         return node
 
     def visit_Min(self, node):
-        source_rep, depth = self._aggregate_helper(node)
-        node.rep = 'ak.min(' + source_rep + ', axis=' + repr(depth) + ')'
+        source_rep = self._aggregate_helper(node)
+        node.rep = 'dak.min(' + source_rep + ', axis=' + repr(self._depth) + ')'
         return node
 
     def visit_Max(self, node):
-        source_rep, depth = self._aggregate_helper(node)
-        node.rep = 'ak.max(' + source_rep + ', axis=' + repr(depth) + ')'
+        source_rep = self._aggregate_helper(node)
+        node.rep = 'dak.max(' + source_rep + ', axis=' + repr(self._depth) + ')'
         return node
 
     def visit_Sum(self, node):
-        source_rep, depth = self._aggregate_helper(node)
-        node.rep = 'ak.sum(' + source_rep + ', axis=' + repr(depth) + ')'
+        source_rep = self._aggregate_helper(node)
+        node.rep = 'dak.sum(' + source_rep + ', axis=' + repr(self._depth) + ')'
         return node
 
     def visit_Choose(self, node):
         self.visit(node.source)
         node.rep = (
-            'ak.combinations('
+            'dak.combinations('
             + self.get_rep(node.source)
             + ', '
             + self.get_rep(node.n)
@@ -594,7 +612,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         self.visit(node.key_selector)
         delattr(node.key_selector, 'rep')
         node.key_selector.body.rep = (
-            'ak.argsort('
+            'dak.argsort('
             + self.get_rep(node.key_selector.body)
             + ', axis='
             + repr(self._depth - 1)
@@ -659,15 +677,15 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         else:
             tuple_rep = self.get_rep(ast.Tuple(elts=[node.value, node.source]))
             comparators_rep = (
-                '*ak.unzip(ak.cartesian('
+                '*dak.unzip(dak.cartesian('
                 + tuple_rep
                 + ',  axis='
                 + repr(self._depth - 1)
                 + ', nested=True)) if isinstance('
                 + self.get_rep(node.value)
-                + ', ak.Array) and isinstance('
+                + ', dak.Array) and isinstance('
                 + self.get_rep(node.source)
-                + ', ak.Array) and getattr('
+                + ', dak.Array) and getattr('
                 + self.get_rep(node.value)
                 + ", 'ndim') >= getattr("
                 + self.get_rep(node.source)
@@ -675,7 +693,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 + tuple_rep
             )
             compare_rep = '(lambda x, y: x == y)(' + comparators_rep + ')'
-            node.rep = 'ak.any(' + compare_rep + ', axis=' + repr(self._depth) + ')'
+            node.rep = 'dak.any(' + compare_rep + ', axis=' + repr(self._depth) + ')'
         return node
 
     def visit_Last(self, node):
