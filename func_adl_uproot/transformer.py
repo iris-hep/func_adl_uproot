@@ -476,6 +476,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             node.rep = select_rep
         return node
 
+    def _drop_depth(self, depth):
+        self._tuple_depths = [tuple_depth - 1 if tuple_depth > depth else tuple_depth for tuple_depth in self._tuple_depths if tuple_depth != depth]
+
     def visit_SelectMany(self, node):
         if type(node.selector) is not ast.Lambda:
             raise TypeError(
@@ -488,6 +491,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             )
         self.visit_Select(node)
         node.rep = 'dak.flatten(' + node.rep + ', axis=' + repr(self._depth + 1) + ')'
+        self._drop_depth(self._depth + 1)
         return node
 
     def visit_Where(self, node):
@@ -521,11 +525,13 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def visit_All(self, node):
         select_node = Select(source=node.source, selector=node.predicate)
         node.rep = 'dak.all(' + self.get_rep(select_node) + ', axis=' + repr(self._depth) + ')'
+        self._drop_depth(self._depth)
         return node
 
     def visit_Any(self, node):
         select_node = Select(source=node.source, selector=node.predicate)
         node.rep = 'dak.any(' + self.get_rep(select_node) + ', axis=' + repr(self._depth) + ')'
+        self._drop_depth(self._depth)
         return node
 
     def visit_Concat(self, node):
@@ -540,6 +546,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         node.rep = (
             'dak.zip(' + self.get_rep(node.source) + ', depth_limit=' + repr(self._depth + 1) + ')'
         )
+        if not isinstance(node, ast.Dict):
+            self._tuple_depths.append(self._depth + 1)
         return node
 
     def _aggregate_helper(self, node):
@@ -561,21 +569,25 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def visit_Count(self, node):
         source_rep = self._aggregate_helper(node)
         node.rep = 'dak.num(' + source_rep + ', axis=' + repr(self._depth) + ')'
+        self._drop_depth(self._depth)
         return node
 
     def visit_Min(self, node):
         source_rep = self._aggregate_helper(node)
         node.rep = 'dak.min(' + source_rep + ', axis=' + repr(self._depth) + ')'
+        self._drop_depth(self._depth)
         return node
 
     def visit_Max(self, node):
         source_rep = self._aggregate_helper(node)
         node.rep = 'dak.max(' + source_rep + ', axis=' + repr(self._depth) + ')'
+        self._drop_depth(self._depth)
         return node
 
     def visit_Sum(self, node):
         source_rep = self._aggregate_helper(node)
         node.rep = 'dak.sum(' + source_rep + ', axis=' + repr(self._depth) + ')'
+        self._drop_depth(self._depth)
         return node
 
     def visit_Choose(self, node):
@@ -649,12 +661,14 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
 
     def visit_First(self, node):
         node.rep = self.get_rep(node.source) + '[' + ':, ' * self._depth + '0]'
+        self._drop_depth(self._depth)
         return node
 
     def visit_ElementAt(self, node):
         node.rep = (
             self.get_rep(node.source) + '[' + ':, ' * self._depth + self.get_rep(node.index) + ']'
         )
+        self._drop_depth(self._depth)
         return node
 
     def visit_Contains(self, node):
@@ -694,8 +708,10 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             )
             compare_rep = '(lambda x, y: x == y)(' + comparators_rep + ')'
             node.rep = 'dak.any(' + compare_rep + ', axis=' + repr(self._depth) + ')'
+            self._drop_depth(self._depth)
         return node
 
     def visit_Last(self, node):
         node.rep = self.get_rep(node.source) + '[' + ':, ' * self._depth + '-1]'
+        self._drop_depth(self._depth)
         return node
