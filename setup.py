@@ -15,7 +15,7 @@ setuptools.setup(
     packages=setuptools.find_packages(exclude=['tests']),
     python_requires=('>=3.8, <3.12'),
     install_requires=[
-        'awkward>=2.0.8',
+        'awkward>=2.0.9',
         'dask[complete]',
         'dask-awkward>=2023.2.0',
         'func-adl>=3.1',

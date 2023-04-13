@@ -4,6 +4,8 @@ import sys
 from qastle import Contains, Select
 
 
+allowed_modules = ['np']
+
 input_filenames_argument_name = 'input_filenames'
 tree_name_argument_name = 'tree_name'
 
@@ -114,7 +116,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def resolve_id(self, id):
-        if id in __builtins__ or id in self._id_scopes:
+        if id in self._id_scopes or id in allowed_modules or id in __builtins__:
             return id
         else:
             raise NameError('Unknown id: ' + id)
@@ -409,7 +411,18 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 + ')'
             )
         else:
-            if isinstance(node.func, ast.Attribute) and node.func.attr == 'ToFourMomenta':
+            if isinstance(node.func, ast.Attribute) and node.func.attr == 'ToFourMomentum':
+                value_rep = self.get_rep(node.func.value)
+                node.rep = (
+                    'dak.with_name(dak.zip('
+                    + value_rep
+                    + ') if isinstance('
+                    + value_rep
+                    + ', dict) else '
+                    + value_rep
+                    + ", 'Momentum4D')"
+                )
+            elif isinstance(node.func, ast.Attribute) and node.func.attr == 'ToFourMomenta':
                 node.rep = 'dak.with_name(' + self.get_rep(node.func.value) + ", 'Momentum4D')"
             else:
                 func_rep = self.get_rep(node.func)
@@ -457,12 +470,14 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             call_node = ast.Call(func=node.selector, args=[node.source])
             call_rep = self.get_rep(call_node)
         select_rep = (
-            '(lambda selection: dak.zip(selection,'
+            '(lambda selection:'
+            + ' dak.zip({key: (dak.zip(value, depth_limit=(None if len(value) == 1 else '
+            + repr(self._depth)
+            + ')) if isinstance(value, dict) else value) for key, value in selection.items()'
+            + '} if isinstance(selection, dict) else selection,'
             + ' depth_limit=(None if len(selection) == 1 else '
             + repr(self._depth)
-            + '))'
-            + ' if not isinstance(selection, dak.Array)'
-            + ' else selection)('
+            + ')) if not isinstance(selection, dak.Array) else selection)('
             + call_rep
             + ')'
         )
