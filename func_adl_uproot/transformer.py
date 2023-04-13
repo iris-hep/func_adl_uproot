@@ -497,7 +497,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
 
     def _drop_depth(self, depth):
         if self._in_projection_op:
-            self._tuple_depths = [tuple_depth - 1 if tuple_depth > depth else tuple_depth for tuple_depth in self._tuple_depths if tuple_depth != depth]
+            self._tuple_depths = [
+                tuple_depth - 1 if tuple_depth > depth else tuple_depth
+                for tuple_depth in self._tuple_depths
+                if tuple_depth != depth
+            ]
 
     def visit_SelectMany(self, node):
         if type(node.selector) is not ast.Lambda:
