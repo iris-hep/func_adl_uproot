@@ -4,6 +4,8 @@ import sys
 from qastle import Contains, Select
 
 
+allowed_modules = ['np']
+
 input_filenames_argument_name = 'input_filenames'
 tree_name_argument_name = 'tree_name'
 
@@ -114,7 +116,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def resolve_id(self, id):
-        if id in __builtins__ or id in self._id_scopes:
+        if id in self._id_scopes or id in allowed_modules or id in __builtins__:
             return id
         else:
             raise NameError('Unknown id: ' + id)

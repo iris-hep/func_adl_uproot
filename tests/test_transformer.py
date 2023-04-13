@@ -57,6 +57,10 @@ def test_builtins():
     assert_identical_source('sum')
 
 
+def test_allowed_modules():
+    assert_identical_source('np')
+
+
 def test_unary_ops():
     assert_equivalent_source('+1')
     assert_identical_source('(-1)')
