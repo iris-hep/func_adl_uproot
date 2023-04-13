@@ -128,6 +128,16 @@ def test_ast_executor_select_scalar_branch_dict():
     assert ast_executor(python_ast)['longs'].tolist() == [0, -2]
 
 
+def test_ast_executor_select_scalar_branch_nested_dict():
+    python_source = (
+        "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+        + " lambda row: {'results': {'ints': row.int_branch, 'longs': row.long_branch}})"
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast)['results']['ints'].tolist() == [0, -1]
+    assert ast_executor(python_ast)['results']['longs'].tolist() == [0, -2]
+
+
 def test_ast_executor_select_of_select_scalar_branch_list():
     python_source = (
         "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
