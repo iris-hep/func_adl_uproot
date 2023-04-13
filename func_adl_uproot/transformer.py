@@ -457,12 +457,14 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             call_node = ast.Call(func=node.selector, args=[node.source])
             call_rep = self.get_rep(call_node)
         select_rep = (
-            '(lambda selection: dak.zip(selection,'
+            '(lambda selection:'
+            + ' dak.zip({key: (dak.zip(value, depth_limit=(None if len(value) == 1 else '
+            + repr(self._depth)
+            + ')) if isinstance(value, dict) else value) for key, value in selection.items()'
+            + '} if isinstance(selection, dict) else selection,'
             + ' depth_limit=(None if len(selection) == 1 else '
             + repr(self._depth)
-            + '))'
-            + ' if not isinstance(selection, dak.Array)'
-            + ' else selection)('
+            + ')) if not isinstance(selection, dak.Array) else selection)('
             + call_rep
             + ')'
         )
