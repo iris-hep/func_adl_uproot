@@ -563,7 +563,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         node.rep = (
             'dak.zip(' + self.get_rep(node.source) + ', depth_limit=' + repr(self._depth + 1) + ')'
         )
-        if not isinstance(node, ast.Dict):
+        if not isinstance(node.source, ast.Dict):
             self._tuple_depths.append(self._depth + 1)
         return node
 
