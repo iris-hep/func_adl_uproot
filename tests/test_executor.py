@@ -465,7 +465,49 @@ def test_ast_executor_field_of_choose():
     assert ast_executor(python_ast).tolist() == [[], [(-1, 2), (-1, 3), (2, 3)], []]
 
 
-def test_ast_executor_tofourvector():
+def test_ast_executor_tofourmomentum():
+    python_source = (
+        "Select(EventDataset('tests/four-vector_tree_file.root', 'tree'),"
+        + "lambda row: Zip({'pt': row.pt_vector_branch, 'eta': row.eta_vector_branch,"
+        + "'phi': row.phi_vector_branch, 'e': row.e_vector_branch})"
+        + ".Select(lambda four_vector: four_vector.ToFourMomentum()))"
+    )
+    python_ast = ast.parse(python_source)
+    result = ast_executor(python_ast)
+
+    assert np.allclose(result[0].pt.tolist(), [])
+    assert np.allclose(result[1].pt.tolist(), [1.1, 2.2, 3.3])
+    assert np.allclose(result[2].pt.tolist(), [11.11])
+
+    assert np.allclose(result[0].eta.tolist(), [])
+    assert np.allclose(result[1].eta.tolist(), [4.4, 0.0, -5.5])
+    assert np.allclose(result[2].eta.tolist(), [0.1212])
+
+    assert np.allclose(result[0].phi.tolist(), [])
+    assert np.allclose(result[1].phi.tolist(), [-0.6, 1.7, 0.0])
+    assert np.allclose(result[2].phi.tolist(), [3.13])
+
+    assert np.allclose(result[0].e.tolist(), [])
+    assert np.allclose(result[1].e.tolist(), [88.0, 9.9, 1010.0])
+    assert np.allclose(result[2].e.tolist(), [14.14])
+
+
+def test_ast_executor_tofourmomentum_mass():
+    python_source = (
+        "Select(EventDataset('tests/four-vector_tree_file.root', 'tree'),"
+        + "lambda row: Zip({'pt': row.pt_vector_branch, 'eta': row.eta_vector_branch,"
+        + "'phi': row.phi_vector_branch, 'e': row.e_vector_branch})"
+        + ".Select(lambda four_vector: four_vector.ToFourMomentum().m))"
+    )
+    python_ast = ast.parse(python_source)
+    result = ast_executor(python_ast)
+
+    assert np.allclose(result[0].tolist(), [])
+    assert np.allclose(result[1].tolist(), [75.739924362942, 9.65246082613, 925.7900432252])
+    assert np.allclose(result[2].tolist(), [8.6420747579])
+
+
+def test_ast_executor_tofourmomenta():
     python_source = (
         "Select(EventDataset('tests/four-vector_tree_file.root', 'tree'),"
         + "lambda row: Zip({'pt': row.pt_vector_branch, 'eta': row.eta_vector_branch,"
@@ -491,7 +533,7 @@ def test_ast_executor_tofourvector():
     assert np.allclose(result[2].e.tolist(), [14.14])
 
 
-def test_ast_executor_tofourvector_mass():
+def test_ast_executor_tofourmomenta_mass():
     python_source = (
         "Select(EventDataset('tests/four-vector_tree_file.root', 'tree'),"
         + "lambda row: Zip({'pt': row.pt_vector_branch, 'eta': row.eta_vector_branch,"
