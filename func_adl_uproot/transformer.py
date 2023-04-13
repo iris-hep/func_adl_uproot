@@ -409,7 +409,18 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 + ')'
             )
         else:
-            if isinstance(node.func, ast.Attribute) and node.func.attr == 'ToFourMomenta':
+            if isinstance(node.func, ast.Attribute) and node.func.attr == 'ToFourMomentum':
+                value_rep = self.get_rep(node.func.value)
+                node.rep = (
+                    'dak.with_name(dak.zip('
+                    + value_rep
+                    + ') if isinstance('
+                    + value_rep
+                    + ', dict) else '
+                    + value_rep
+                    + ", 'Momentum4D')"
+                )
+            elif isinstance(node.func, ast.Attribute) and node.func.attr == 'ToFourMomenta':
                 node.rep = 'dak.with_name(' + self.get_rep(node.func.value) + ", 'Momentum4D')"
             else:
                 func_rep = self.get_rep(node.func)
