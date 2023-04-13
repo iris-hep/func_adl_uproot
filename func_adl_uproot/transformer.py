@@ -48,6 +48,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         self._tuple_depths = []
         self._id_scopes = {}
         self._projection_stack = []
+        self._in_projection_op = False
 
     def visit(self, node):
         if hasattr(node, 'rep'):
@@ -447,6 +448,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             node.source.rep = 'x'
         else:
             at_tuple = False
+        prev_in_projection_op = self._in_projection_op
+        self._in_projection_op = True
         self._depth += 1
         self._projection_stack.append(node.selector.args.args[0].arg)
         node.selector.body = self._broadcast_value(node.selector.args.args[0], node.selector.body)
@@ -489,10 +492,12 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             )
         else:
             node.rep = select_rep
+        self._in_projection_op = prev_in_projection_op
         return node
 
     def _drop_depth(self, depth):
-        self._tuple_depths = [tuple_depth - 1 if tuple_depth > depth else tuple_depth for tuple_depth in self._tuple_depths if tuple_depth != depth]
+        if self._in_projection_op:
+            self._tuple_depths = [tuple_depth - 1 if tuple_depth > depth else tuple_depth for tuple_depth in self._tuple_depths if tuple_depth != depth]
 
     def visit_SelectMany(self, node):
         if type(node.selector) is not ast.Lambda:
