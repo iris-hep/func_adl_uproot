@@ -525,7 +525,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 + len(node.predicate.args.args)
             )
         self.visit(node.source)
-        tuple_depths = self._tuple_depths
+        prev_tuple_depths = self._tuple_depths
         self._depth += 1
         if sys.version_info[0] < 3:
             subscriptable = node.predicate.args.args[0].id
@@ -541,7 +541,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         call_node = ast.Call(func=node.predicate, args=[node.source])
         node.rep = self.get_rep(call_node)
         self._depth -= 1
-        self._tuple_depths = tuple_depths
+        self._tuple_depths = prev_tuple_depths
         return node
 
     def visit_All(self, node):
