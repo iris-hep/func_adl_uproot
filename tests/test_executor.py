@@ -429,14 +429,14 @@ def test_ast_executor_choose():
         + 'lambda row: row.int_vector_branch.Choose(2))'
     )
     python_ast = ast.parse(python_source)
-    assert ast_executor(python_ast).tolist() == [[], [(-1, 2), (-1, 3), (2, 3)], []]
+    assert ast_executor(python_ast).tolist() == [[], [[-1, 2], [-1, 3], [2, 3]], []]
 
 
 def test_ast_executor_select_of_choose():
     python_source = (
         "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
         + 'lambda row: row.int_vector_branch.Choose(2)'
-        + '.Select(lambda pair: pair[0] + pair[1]))'
+        + '.Select(lambda pair: pair.ElementAt(0) + pair.ElementAt(1)))'
     )
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [[], [1, 2, 5], []]
@@ -460,7 +460,7 @@ def test_ast_executor_choose_zipped_dict():
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [
         [],
-        [({'ints': -1}, {'ints': 2}), ({'ints': -1}, {'ints': 3}), ({'ints': 2}, {'ints': 3})],
+        [[{'ints': -1}, {'ints': 2}], [{'ints': -1}, {'ints': 3}], [{'ints': 2}, {'ints': 3}]],
         [],
     ]
 
@@ -472,7 +472,7 @@ def test_ast_executor_field_of_choose():
         + '.Select(lambda pair: pair.Select(lambda record: record.int)))'
     )
     python_ast = ast.parse(python_source)
-    assert ast_executor(python_ast).tolist() == [[], [(-1, 2), (-1, 3), (2, 3)], []]
+    assert ast_executor(python_ast).tolist() == [[], [[-1, 2], [-1, 3], [2, 3]], []]
 
 
 def test_ast_executor_tofourmomentum():

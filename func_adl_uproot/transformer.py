@@ -45,7 +45,6 @@ compare_op_dict = {
 class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def __init__(self):
         self._depth = None
-        self._tuple_depths = []
         self._id_scopes = {}
         self._projection_stack = []
 
@@ -441,16 +440,10 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 + len(node.selector.args.args)
             )
         self.visit(node.source)
-        if self._depth in self._tuple_depths:
-            at_tuple = True
-            original_source_rep = self.get_rep(node.source)
-            node.source.rep = 'x'
-        else:
-            at_tuple = False
         self._depth += 1
         self._projection_stack.append(node.selector.args.args[0].arg)
         node.selector.body = self._broadcast_value(node.selector.args.args[0], node.selector.body)
-        if self._depth > 2 and not at_tuple:
+        if (isinstance(node.source, ast.Name) and node.source.id in self._projection_stack[:-2]) or (isinstance(node.source, ast.Attribute) and isinstance(node.source.value, ast.Name) and node.source.value.id in self._projection_stack[:-2]):
             rep1, rep2 = self._projection_stack[-2], self._projection_stack[-1]
             lambda_node = ast.Lambda(
                 args=ast.arguments(args=[ast.arg(arg=rep1), ast.arg(arg=rep2)]),
@@ -483,12 +476,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         )
         self._depth -= 1
         self._projection_stack.pop()
-        if at_tuple:
-            node.rep = (
-                'dak.zip([' + select_rep + ' for x in dak.unzip(' + original_source_rep + ')])'
-            )
-        else:
-            node.rep = select_rep
+        node.rep = select_rep
         return node
 
     def visit_SelectMany(self, node):
@@ -557,45 +545,25 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         )
         return node
 
-    def _aggregate_helper(self, node):
-        self.visit(node.source)
-        if self._depth in self._tuple_depths:
-            source_rep = (
-                'dak.concatenate([dak.singletons(i, axis='
-                + str(self._depth - 1)
-                + ') for i in dak.unzip('
-                + self.get_rep(node.source)
-                + ')], axis='
-                + str(self._depth)
-                + ')'
-            )
-        else:
-            source_rep = self.get_rep(node.source)
-        return source_rep
-
     def visit_Count(self, node):
-        source_rep = self._aggregate_helper(node)
-        node.rep = 'dak.num(' + source_rep + ', axis=' + repr(self._depth) + ')'
+        node.rep = 'dak.num(' + self.get_rep(node.source) + ', axis=' + repr(self._depth) + ')'
         return node
 
     def visit_Min(self, node):
-        source_rep = self._aggregate_helper(node)
-        node.rep = 'dak.min(' + source_rep + ', axis=' + repr(self._depth) + ')'
+        node.rep = 'dak.min(' + self.get_rep(node.source) + ', axis=' + repr(self._depth) + ')'
         return node
 
     def visit_Max(self, node):
-        source_rep = self._aggregate_helper(node)
-        node.rep = 'dak.max(' + source_rep + ', axis=' + repr(self._depth) + ')'
+        node.rep = 'dak.max(' + self.get_rep(node.source) + ', axis=' + repr(self._depth) + ')'
         return node
 
     def visit_Sum(self, node):
-        source_rep = self._aggregate_helper(node)
-        node.rep = 'dak.sum(' + source_rep + ', axis=' + repr(self._depth) + ')'
+        node.rep = 'dak.sum(' + self.get_rep(node.source) + ', axis=' + repr(self._depth) + ')'
         return node
 
     def visit_Choose(self, node):
         self.visit(node.source)
-        node.rep = (
+        combinations_rep = (
             'dak.combinations('
             + self.get_rep(node.source)
             + ', '
@@ -604,7 +572,15 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             + repr(self._depth)
             + ')'
         )
-        self._tuple_depths.append(self._depth + 1)
+        node.rep = (
+            'dak.concatenate([dak.singletons(i, axis='
+            + str(self._depth)
+            + ') for i in dak.unzip('
+            + combinations_rep
+            + ')], axis='
+            + str(self._depth + 1)
+            + ')'
+        )
         return node
 
     def visit_OrderBy(self, node, ascending=True):
