@@ -475,6 +475,28 @@ def test_ast_executor_field_of_choose():
     assert ast_executor(python_ast).tolist() == [[], [[-1, 2], [-1, 3], [2, 3]], []]
 
 
+# https://github.com/iris-hep/func_adl_uproot/issues/105
+def test_ast_executor_reducer_of_reducer_of_choose():
+    python_source = (
+        "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + 'lambda row: row.int_vector_branch).Where(lambda ints: ints.Count() >= 2)'
+        + '.Select(lambda ints: ints.Choose(2).First().Max())'
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [2]
+
+
+def test_ast_executor_multiple_counts_of_choose():
+    python_source = (
+        "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + "lambda row: {'int_pairs': row.int_vector_branch.Choose(2),"
+        + " 'float_pairs': row.float_vector_branch.Choose(2)})"
+        + '.Select(lambda row: (row.int_pairs.Count(), row.float_pairs.Count()))'
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [(0, 0), (3, 3), (0, 0)]
+
+
 def test_ast_executor_tofourmomentum():
     python_source = (
         "Select(EventDataset('tests/four-vector_tree_file.root', 'tree'),"
