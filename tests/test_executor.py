@@ -702,6 +702,18 @@ def test_ast_executor_cross_join():
     assert np.allclose(result[2], [[(13, 15.15)]])
 
 
+def test_ast_executor_cross_join_where_any():
+    python_source = (
+        "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + ' lambda row: row.int_vector_branch.Where('
+        + 'lambda int_value: row.float_vector_branch.Any('
+        + 'lambda float_value: int_value * float_value > 10)))'
+    )
+    python_ast = ast.parse(python_source)
+    result = ast_executor(python_ast).tolist()
+    assert result == [[], [2, 3], [13]]
+
+
 def test_ast_executor_first_scalar_branch():
     python_source = (
         "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
