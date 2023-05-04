@@ -509,6 +509,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             subscriptable = node.predicate.args.args[0].id
         else:
             subscriptable = node.predicate.args.args[0].arg
+        self._projection_stack.append(subscriptable)
         if sys.version_info[0] < 3 or (sys.version_info[0] == 3 and sys.version_info[1] < 9):
             slice_node = ast.Index(node.predicate.body)
         else:
@@ -519,6 +520,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         call_node = ast.Call(func=node.predicate, args=[node.source])
         node.rep = self.get_rep(call_node)
         self._depth -= 1
+        self._projection_stack.pop()
         return node
 
     def visit_All(self, node):
