@@ -714,6 +714,18 @@ def test_ast_executor_cross_join_where_any():
     assert result == [[], [2, 3], [13]]
 
 
+def test_ast_executor_cross_join_where_any_2():
+    python_source = (
+        "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + ' lambda row: row.int_vector_branch.Where('
+        + 'lambda int_value: row.float_vector_branch.Any('
+        + 'lambda float_value: int_value * float_value < -10)))'
+    )
+    python_ast = ast.parse(python_source)
+    result = ast_executor(python_ast).tolist()
+    assert result == [[], [2, 3], []]
+
+
 def test_ast_executor_first_scalar_branch():
     python_source = (
         "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
@@ -750,6 +762,15 @@ def test_ast_executor_elementat_vector_branch():
     )
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [2]
+
+
+def test_ast_executor_elementat_in_cross_join():
+    python_source = (
+        "Where(EventDataset('tests/vectors_tree_file.root', 'tree'), lambda row: row.int_vector_branch.Count() > 0)"
+        + '.Select(lambda row: row.float_vector_branch.Select(lambda float_value: row.int_vector_branch.ElementAt(0)))'
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [-1, 13]
 
 
 # def test_ast_executor_contains_scalar_branch_false():
@@ -933,3 +954,31 @@ def test_ast_executor_ternary_operator_branch():
     )
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [0, -2]
+
+
+def test_ast_executor_call_builtin():
+    python_source = (
+        "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+        + ' lambda row: abs(row.int_branch))'
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [0, 1]
+
+
+def test_ast_executor_call_allowed_module():
+    python_source = (
+        "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+        + ' lambda row: np.abs(row.int_branch))'
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [0, 1]
+
+
+def test_ast_executor_where_of_call():
+    python_source = (
+        "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+        + ' lambda row: row.int_branch)'
+        + '.Where(lambda int_value: abs(int_value) > 0)'
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [-1]
