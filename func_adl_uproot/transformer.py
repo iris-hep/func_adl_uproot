@@ -74,9 +74,10 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def visit_Module(self, node):
         if len(node.body) < 1:
             node.rep = ''
+            node._depth = None
         else:
             node.rep = self.get_rep(node.body[0])
-        node._depth = node.body[0]._depth
+            node._depth = node.body[0]._depth
         return node
 
     def visit_Expr(self, node):
