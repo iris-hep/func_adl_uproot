@@ -429,14 +429,14 @@ def test_ast_executor_choose():
         + 'lambda row: row.int_vector_branch.Choose(2))'
     )
     python_ast = ast.parse(python_source)
-    assert ast_executor(python_ast).tolist() == [[], [(-1, 2), (-1, 3), (2, 3)], []]
+    assert ast_executor(python_ast).tolist() == [[], [[-1, 2], [-1, 3], [2, 3]], []]
 
 
 def test_ast_executor_select_of_choose():
     python_source = (
         "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
         + 'lambda row: row.int_vector_branch.Choose(2)'
-        + '.Select(lambda pair: pair[0] + pair[1]))'
+        + '.Select(lambda pair: pair.ElementAt(0) + pair.ElementAt(1)))'
     )
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [[], [1, 2, 5], []]
@@ -460,7 +460,7 @@ def test_ast_executor_choose_zipped_dict():
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [
         [],
-        [({'ints': -1}, {'ints': 2}), ({'ints': -1}, {'ints': 3}), ({'ints': 2}, {'ints': 3})],
+        [[{'ints': -1}, {'ints': 2}], [{'ints': -1}, {'ints': 3}], [{'ints': 2}, {'ints': 3}]],
         [],
     ]
 
@@ -472,7 +472,29 @@ def test_ast_executor_field_of_choose():
         + '.Select(lambda pair: pair.Select(lambda record: record.int)))'
     )
     python_ast = ast.parse(python_source)
-    assert ast_executor(python_ast).tolist() == [[], [(-1, 2), (-1, 3), (2, 3)], []]
+    assert ast_executor(python_ast).tolist() == [[], [[-1, 2], [-1, 3], [2, 3]], []]
+
+
+# https://github.com/iris-hep/func_adl_uproot/issues/105
+def test_ast_executor_reducer_of_reducer_of_choose():
+    python_source = (
+        "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + 'lambda row: row.int_vector_branch).Where(lambda ints: ints.Count() >= 2)'
+        + '.Select(lambda ints: ints.Choose(2).First().Max())'
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [2]
+
+
+def test_ast_executor_multiple_counts_of_choose():
+    python_source = (
+        "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + "lambda row: {'int_pairs': row.int_vector_branch.Choose(2),"
+        + " 'float_pairs': row.float_vector_branch.Choose(2)})"
+        + '.Select(lambda row: (row.int_pairs.Count(), row.float_pairs.Count()))'
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [(0, 0), (3, 3), (0, 0)]
 
 
 def test_ast_executor_tofourmomentum():
@@ -680,6 +702,30 @@ def test_ast_executor_cross_join():
     assert np.allclose(result[2], [[(13, 15.15)]])
 
 
+def test_ast_executor_cross_join_where_any():
+    python_source = (
+        "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + ' lambda row: row.int_vector_branch.Where('
+        + 'lambda int_value: row.float_vector_branch.Any('
+        + 'lambda float_value: int_value * float_value > 10)))'
+    )
+    python_ast = ast.parse(python_source)
+    result = ast_executor(python_ast).tolist()
+    assert result == [[], [2, 3], [13]]
+
+
+def test_ast_executor_cross_join_where_any_2():
+    python_source = (
+        "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + ' lambda row: row.int_vector_branch.Where('
+        + 'lambda int_value: row.float_vector_branch.Any('
+        + 'lambda float_value: int_value * float_value < -10)))'
+    )
+    python_ast = ast.parse(python_source)
+    result = ast_executor(python_ast).tolist()
+    assert result == [[], [2, 3], []]
+
+
 def test_ast_executor_first_scalar_branch():
     python_source = (
         "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
@@ -716,6 +762,17 @@ def test_ast_executor_elementat_vector_branch():
     )
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [2]
+
+
+def test_ast_executor_elementat_in_cross_join():
+    python_source = (
+        "Where(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + " lambda row: row.int_vector_branch.Count() > 0)"
+        + '.Select(lambda row: row.float_vector_branch'
+        + '.Select(lambda float_value: row.int_vector_branch.ElementAt(0)))'
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [-1, 13]
 
 
 # def test_ast_executor_contains_scalar_branch_false():
@@ -899,3 +956,31 @@ def test_ast_executor_ternary_operator_branch():
     )
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [0, -2]
+
+
+def test_ast_executor_call_builtin():
+    python_source = (
+        "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+        + ' lambda row: abs(row.int_branch))'
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [0, 1]
+
+
+def test_ast_executor_call_allowed_module():
+    python_source = (
+        "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+        + ' lambda row: np.abs(row.int_branch))'
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [0, 1]
+
+
+def test_ast_executor_where_of_call():
+    python_source = (
+        "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+        + ' lambda row: row.int_branch)'
+        + '.Where(lambda int_value: abs(int_value) > 0)'
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast).tolist() == [-1]
