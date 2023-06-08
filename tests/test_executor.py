@@ -766,8 +766,10 @@ def test_ast_executor_elementat_vector_branch():
 
 def test_ast_executor_elementat_in_cross_join():
     python_source = (
-        "Where(EventDataset('tests/vectors_tree_file.root', 'tree'), lambda row: row.int_vector_branch.Count() > 0)"
-        + '.Select(lambda row: row.float_vector_branch.Select(lambda float_value: row.int_vector_branch.ElementAt(0)))'
+        "Where(EventDataset('tests/vectors_tree_file.root', 'tree'),"
+        + " lambda row: row.int_vector_branch.Count() > 0)"
+        + '.Select(lambda row: row.float_vector_branch'
+        + '.Select(lambda float_value: row.int_vector_branch.ElementAt(0)))'
     )
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [-1, 13]

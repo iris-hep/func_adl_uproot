@@ -287,10 +287,15 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                     + slice_rep
                     + '])'
                 )
-            elif isinstance(node.slice, ast.Tuple) or ((sys.version_info[0] == 3 and sys.version_info[1] < 9) and isinstance(node.slice, ast.ExtSlice)):
+            elif isinstance(node.slice, ast.Tuple) or (
+                (sys.version_info[0] == 3 and sys.version_info[1] < 9)
+                and isinstance(node.slice, ast.ExtSlice)
+            ):
                 raise NotImplementedError('Multidimensional slices are not supported')
             else:
-                if (sys.version_info[0] == 3 and sys.version_info[1] < 9) and isinstance(node.slice, ast.Index):
+                if (sys.version_info[0] == 3 and sys.version_info[1] < 9) and isinstance(
+                    node.slice, ast.Index
+                ):
                     slice_value = node.slice.value
                 else:
                     slice_value = node.slice
@@ -479,7 +484,13 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         self._projection_stack.append(node.selector.args.args[0].arg)
         node.selector.args.args[0]._depth = node.source._depth + 1
         node.selector.body = self._broadcast_value(node.selector.args.args[0], node.selector.body)
-        if (isinstance(node.source, ast.Name) and node.source.id in self._projection_stack[:-2]) or (isinstance(node.source, ast.Attribute) and isinstance(node.source.value, ast.Name) and node.source.value.id in self._projection_stack[:-2]):
+        if (
+            isinstance(node.source, ast.Name) and node.source.id in self._projection_stack[:-2]
+        ) or (
+            isinstance(node.source, ast.Attribute)
+            and isinstance(node.source.value, ast.Name)
+            and node.source.value.id in self._projection_stack[:-2]
+        ):
             rep1 = self._projection_stack[-2]
             arg_node_1 = ast.arg(arg=rep1)
             arg_node_1._depth = self._id_depths[rep1][-1]
@@ -726,7 +737,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             node.rep = self.get_rep(or_node)
         else:
             tuple_rep = self.get_rep(ast.Tuple(elts=[node.value, node.source]))
-            condition_rep =  ('if isinstance('
+            condition_rep = (
+                'if isinstance('
                 + self.get_rep(node.value)
                 + ', dak.Array) and isinstance('
                 + self.get_rep(node.source)
@@ -734,7 +746,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 + self.get_rep(node.value)
                 + ", 'ndim') >= getattr("
                 + self.get_rep(node.source)
-                + ", 'ndim')")
+                + ", 'ndim')"
+            )
             comparators_rep = (
                 '*dak.unzip(dak.cartesian('
                 + tuple_rep
