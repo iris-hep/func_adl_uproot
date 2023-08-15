@@ -369,13 +369,13 @@ def test_ast_executor_select_of_count_vector_branch():
     assert ast_executor(python_ast).tolist() == [0, 3, 1]
 
 
-# def test_ast_executor_min_of_select_scalar_branch():
-#     python_source = (
-#         "EventDataset('tests/scalars_tree_file.root', 'tree')"
-#         + ".Select(lambda row: row.int_branch).Min()"
-#     )
-#     python_ast = ast.parse(python_source)
-#     assert ast_executor(python_ast) == -1
+def test_ast_executor_min_of_select_scalar_branch():
+    python_source = (
+        "EventDataset('tests/scalars_tree_file.root', 'tree')"
+        + ".Select(lambda row: row.int_branch).Min()"
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast) == -1
 
 
 def test_ast_executor_select_of_min_vector_branch():
@@ -387,13 +387,13 @@ def test_ast_executor_select_of_min_vector_branch():
     assert ast_executor(python_ast).tolist() == [None, -1, 13]
 
 
-# def test_ast_executor_max_of_select_scalar_branch():
-#     python_source = (
-#         "EventDataset('tests/scalars_tree_file.root', 'tree')"
-#         + ".Select(lambda row: row.int_branch).Max()"
-#     )
-#     python_ast = ast.parse(python_source)
-#     assert ast_executor(python_ast) == 0
+def test_ast_executor_max_of_select_scalar_branch():
+    python_source = (
+        "EventDataset('tests/scalars_tree_file.root', 'tree')"
+        + ".Select(lambda row: row.int_branch).Max()"
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast) == 0
 
 
 def test_ast_executor_select_of_max_vector_branch():
@@ -405,13 +405,13 @@ def test_ast_executor_select_of_max_vector_branch():
     assert ast_executor(python_ast).tolist() == [None, 3, 13]
 
 
-# def test_ast_executor_sum_of_select_scalar_branch():
-#     python_source = (
-#         "EventDataset('tests/scalars_tree_file.root', 'tree')"
-#         + ".Select(lambda row: row.int_branch).Sum()"
-#     )
-#     python_ast = ast.parse(python_source)
-#     assert ast_executor(python_ast) == -1
+def test_ast_executor_sum_of_select_scalar_branch():
+    python_source = (
+        "EventDataset('tests/scalars_tree_file.root', 'tree')"
+        + ".Select(lambda row: row.int_branch).Sum()"
+    )
+    python_ast = ast.parse(python_source)
+    assert ast_executor(python_ast) == -1
 
 
 def test_ast_executor_select_of_sum_vector_branch():
@@ -775,22 +775,26 @@ def test_ast_executor_elementat_in_cross_join():
     assert ast_executor(python_ast).tolist() == [-1, 13]
 
 
-# def test_ast_executor_contains_scalar_branch_false():
-#     python_source = (
-#         "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
-#         + "lambda row: row.int_branch).Contains(1)"
-#     )
-#     python_ast = ast.parse(python_source)
-#     assert ast_executor(python_ast) is False
+def test_ast_executor_contains_scalar_branch_false():
+    python_source = (
+        "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+        + "lambda row: row.int_branch).Contains(1)"
+    )
+    python_ast = ast.parse(python_source)
+    result = ast_executor(python_ast)
+    assert isinstance(result, np.bool_)
+    assert not result
 
 
-# def test_ast_executor_contains_scalar_branch_true():
-#     python_source = (
-#         "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
-#         + "lambda row: row.int_branch).Contains(0)"
-#     )
-#     python_ast = ast.parse(python_source)
-#     assert ast_executor(python_ast) is True
+def test_ast_executor_contains_scalar_branch_true():
+    python_source = (
+        "Select(EventDataset('tests/scalars_tree_file.root', 'tree'),"
+        + "lambda row: row.int_branch).Contains(0)"
+    )
+    python_ast = ast.parse(python_source)
+    result = ast_executor(python_ast)
+    assert isinstance(result, np.bool_)
+    assert result
 
 
 def test_ast_executor_contains_vector_branch():
@@ -840,22 +844,26 @@ def test_ast_executor_last_vector_branch():
     assert ast_executor(python_ast).tolist() == [3, 13]
 
 
-# def test_ast_executor_all_scalar_branch_false():
-#     python_source = (
-#         "EventDataset('tests/scalars_tree_file.root', 'tree')"
-#         + ".All(lambda row: row.int_branch > 0)"
-#     )
-#     python_ast = ast.parse(python_source)
-#     assert ast_executor(python_ast) is False
+def test_ast_executor_all_scalar_branch_false():
+    python_source = (
+        "EventDataset('tests/scalars_tree_file.root', 'tree')"
+        + ".All(lambda row: row.int_branch > 0)"
+    )
+    python_ast = ast.parse(python_source)
+    result = ast_executor(python_ast)
+    assert isinstance(result, np.bool_)
+    assert not result
 
 
-# def test_ast_executor_all_scalar_branch_true():
-#     python_source = (
-#         "EventDataset('tests/scalars_tree_file.root', 'tree')"
-#         + ".All(lambda row: row.int_branch > -2)"
-#     )
-#     python_ast = ast.parse(python_source)
-#     assert ast_executor(python_ast) is True
+def test_ast_executor_all_scalar_branch_true():
+    python_source = (
+        "EventDataset('tests/scalars_tree_file.root', 'tree')"
+        + ".All(lambda row: row.int_branch > -2)"
+    )
+    python_ast = ast.parse(python_source)
+    result = ast_executor(python_ast)
+    assert isinstance(result, np.bool_)
+    assert result
 
 
 def test_ast_executor_all_vector_branch():
@@ -867,22 +875,26 @@ def test_ast_executor_all_vector_branch():
     assert ast_executor(python_ast).tolist() == [True, False, True]
 
 
-# def test_ast_executor_any_scalar_branch_false():
-#     python_source = (
-#         "EventDataset('tests/scalars_tree_file.root', 'tree')"
-#         + ".Any(lambda row: row.int_branch > 0)"
-#     )
-#     python_ast = ast.parse(python_source)
-#     assert ast_executor(python_ast) is False
+def test_ast_executor_any_scalar_branch_false():
+    python_source = (
+        "EventDataset('tests/scalars_tree_file.root', 'tree')"
+        + ".Any(lambda row: row.int_branch > 0)"
+    )
+    python_ast = ast.parse(python_source)
+    result = ast_executor(python_ast)
+    assert isinstance(result, np.bool_)
+    assert not result
 
 
-# def test_ast_executor_any_scalar_branch_true():
-#     python_source = (
-#         "EventDataset('tests/scalars_tree_file.root', 'tree')"
-#         + ".Any(lambda row: row.int_branch > -1)"
-#     )
-#     python_ast = ast.parse(python_source)
-#     assert ast_executor(python_ast) is True
+def test_ast_executor_any_scalar_branch_true():
+    python_source = (
+        "EventDataset('tests/scalars_tree_file.root', 'tree')"
+        + ".Any(lambda row: row.int_branch > -1)"
+    )
+    python_ast = ast.parse(python_source)
+    result = ast_executor(python_ast)
+    assert isinstance(result, np.bool_)
+    assert result
 
 
 def test_ast_executor_any_vector_branch():
