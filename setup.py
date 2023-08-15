@@ -22,7 +22,7 @@ setuptools.setup(
         'numpy',
         'qastle>=0.16.0',
         'uproot>=5',
-        'vector',
+        'vector>=1.1.0',
     ],
     extras_require={'test': ['flake8', 'pytest', 'pytest-cov']},
     author='Mason Proffitt',
