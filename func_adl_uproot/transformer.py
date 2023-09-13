@@ -418,9 +418,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                     + 'np.atleast_2d((lambda classnames:'
                     + ' np.hstack([list(classnames.keys()),'
                     + ' list(classnames.values())]))'
-                    + '(uproot.open('
+                    + '(uproot.open({'
                     + source_rep
-                    + '[0]).classnames())'
+                    + '[0]: None}).classnames())'
                     + '))[0]'
                 )
             tree_name_rep = (
