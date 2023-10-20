@@ -1204,8 +1204,8 @@ def test_adl_benchmark_8():
         )
         # Quotes needed around lambda here due to https://github.com/iris-hep/func_adl/issues/127
         .Select(
-            'lambda event: (2 * event.leading_other_lepton_p4.pt * event.met.pt'
-            ' * (1 - np.cos(event.leading_other_lepton_p4.deltaphi(event.met)))) ** 0.5'
+            lambda event: (2 * event.leading_other_lepton_p4.pt * event.met.pt
+             * (1 - np.cos(event.leading_other_lepton_p4.deltaphi(event.met)))) ** 0.5
         )
     )
     (
