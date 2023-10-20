@@ -18,7 +18,7 @@ setuptools.setup(
         'awkward>=2.0.9',
         'dask[complete]',
         'dask-awkward>=2023.8.1',
-        'func-adl>=3.1',
+        'func-adl>=3.2.7',
         'numpy',
         'qastle>=0.16.1',
         'uproot>=5',
