@@ -20,7 +20,7 @@ setuptools.setup(
         'dask-awkward>=2023.8.1',
         'func-adl>=3.2.7',
         'numpy',
-        'qastle>=0.16.1',
+        'qastle>=0.17.0',
         'uproot>=5',
         'vector>=1.1.0',
     ],
