@@ -16,7 +16,6 @@ setuptools.setup(
     python_requires=('>=3.8, <3.13'),
     install_requires=[
         'awkward>=2.0.9',
-        'dask[complete]',
         'dask-awkward>=2023.8.1',
         'func-adl>=3.2.7',
         'numpy',
