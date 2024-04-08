@@ -5,11 +5,13 @@ import qastle
 from .transformer import PythonSourceGeneratorTransformer
 from .transformer import branch_filter_name, input_filenames_argument_name, tree_name_argument_name
 
-# Adapted from https://github.com/CoffeaTeam/coffea/blob/e2cd5e291e90314b619a40a1ecd2649f1b2de00f/src/coffea/util.py#L217-L248
+# Adapted from https://github.com/CoffeaTeam/coffea/blob/v2024.4.0/src/coffea/util.py#L217-L248
 remove_not_interpretable_source = '''    def ''' + branch_filter_name + '''(branch):
         if isinstance(branch.interpretation, uproot.interpretation.identify.uproot.AsGrouped):
             for name, interpretation in branch.interpretation.subbranches.items():
-                if isinstance(interpretation, uproot.interpretation.identify.UnknownInterpretation):
+                if isinstance(
+                        interpretation, uproot.interpretation.identify.UnknownInterpretation
+                    ):
                     logging.getLogger(__name__).warning(
                         f"Skipping {branch.name} as it is not interpretable by Uproot"
                     )
