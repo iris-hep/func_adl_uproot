@@ -6,7 +6,10 @@ from .transformer import PythonSourceGeneratorTransformer
 from .transformer import branch_filter_name, input_filenames_argument_name, tree_name_argument_name
 
 # Adapted from https://github.com/CoffeaTeam/coffea/blob/v2024.4.0/src/coffea/util.py#L217-L248
-remove_not_interpretable_source = '''    def ''' + branch_filter_name + '''(branch):
+remove_not_interpretable_source = (
+    '    def '
+    + branch_filter_name
+    + '''(branch):
         if isinstance(branch.interpretation, uproot.interpretation.identify.uproot.AsGrouped):
             for name, interpretation in branch.interpretation.subbranches.items():
                 if isinstance(
@@ -32,6 +35,7 @@ remove_not_interpretable_source = '''    def ''' + branch_filter_name + '''(bran
             return True
 
 '''
+)
 
 
 def python_ast_to_python_source(python_ast):
