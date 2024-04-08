@@ -3,7 +3,33 @@ import copy
 import qastle
 
 from .transformer import PythonSourceGeneratorTransformer
-from .transformer import input_filenames_argument_name, tree_name_argument_name
+from .transformer import branch_filter_name, input_filenames_argument_name, tree_name_argument_name
+
+# Adapted from https://github.com/CoffeaTeam/coffea/blob/e2cd5e291e90314b619a40a1ecd2649f1b2de00f/src/coffea/util.py#L217-L248
+remove_not_interpretable_source = '''    def ''' + branch_filter_name + '''(branch):
+        if isinstance(branch.interpretation, uproot.interpretation.identify.uproot.AsGrouped):
+            for name, interpretation in branch.interpretation.subbranches.items():
+                if isinstance(interpretation, uproot.interpretation.identify.UnknownInterpretation):
+                    logging.getLogger(__name__).warning(
+                        f"Skipping {branch.name} as it is not interpretable by Uproot"
+                    )
+                    return False
+        if isinstance(branch.interpretation, uproot.interpretation.identify.UnknownInterpretation):
+            logging.getLogger(__name__).warning(
+                f"Skipping {branch.name} as it is not interpretable by Uproot"
+            )
+            return False
+        try:
+            _ = branch.interpretation.awkward_form(None)
+        except uproot.interpretation.objects.CannotBeAwkward:
+            logging.getLogger(__name__).warning(
+                f"Skipping {branch.name} as it cannot be represented as an Awkward array"
+            )
+            return False
+        else:
+            return True
+
+'''
 
 
 def python_ast_to_python_source(python_ast):
@@ -26,7 +52,8 @@ def generate_python_source(ast, function_name='run_query'):
         + '=None):\n'
     )
     source += '    import functools, logging, numpy as np, dask_awkward as dak, uproot, vector\n'
-    source += '    vector.register_awkward()\n'
+    source += '    vector.register_awkward()\n\n'
+    source += remove_not_interpretable_source
     source += '    return ' + python_ast_to_python_source(python_ast) + '.compute()\n'
     return source
 
