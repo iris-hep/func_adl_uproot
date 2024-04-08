@@ -8,6 +8,7 @@ allowed_modules = ['np']
 
 input_filenames_argument_name = 'input_filenames'
 tree_name_argument_name = 'tree_name'
+branch_filter_name = '_remove_not_interpretable'
 
 unary_op_dict = {ast.UAdd: '+', ast.USub: '-', ast.Invert: '~'}
 
@@ -437,7 +438,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 + "(logging.getLogger(__name__).info('Using treename='"
                 + ' + repr(tree_name_to_use)),'
                 + ' uproot.dask({input_file: tree_name_to_use'
-                + ' for input_file in input_files}))[1])'
+                + ' for input_file in input_files}, filter_branch='
+                + branch_filter_name
+                + '))[1])'
                 + '('
                 + source_rep
                 + ', '
