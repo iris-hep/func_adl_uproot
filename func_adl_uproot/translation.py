@@ -66,5 +66,6 @@ def generate_python_source(ast, function_name='run_query'):
 
 def generate_function(ast, function_name='run_query'):
     source = generate_python_source(ast)
-    exec(source)
-    return eval(function_name)
+    captured_locals = dict()
+    exec(source, None, captured_locals)
+    return eval(function_name, None, captured_locals)
