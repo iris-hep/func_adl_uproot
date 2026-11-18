@@ -216,7 +216,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def _broadcast_value(self, array_node, value_node):
-        if isinstance(value_node, (ast.Constant, ast.Num, ast.Str)):
+        if isinstance(value_node, ast.Constant):
             value_node.rep = (
                 'dak.full_like(dak.unzip('
                 + self.get_rep(array_node)

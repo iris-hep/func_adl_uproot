@@ -1,5 +1,9 @@
 from func_adl_uproot import UprootDataset
 
+import asyncio
+
+import numpy as np
+
 
 def test_uproot_dataset():
     ds = UprootDataset('tests/scalars_tree_file.root')
@@ -10,3 +14,25 @@ def test_uproot_dataset():
         'double_branch',
         'bool_branch',
     ]
+
+
+def test_materialize_cloned_query():
+    query = UprootDataset('tests/scalars_tree_file.root').Select(
+        'lambda row: row.int_branch'
+    ).Where('lambda value: value < 0')
+    assert query.value().tolist() == [-1]
+    assert asyncio.run(query.execute_result_async(query.query_ast)).tolist() == [-1]
+
+
+def test_literal_dictionary_four_momentum():
+    source = UprootDataset('tests/scalars_tree_file.root')
+    result = source.Select(
+        lambda row: {
+            'pt': row.float_branch,
+            'phi': row.float_branch * 0,
+            'eta': row.float_branch * 0,
+            'mass': row.float_branch * 0,
+        }.ToFourMomentum()
+    ).Select('lambda momentum: momentum.pt').value()
+    expected = source.Select('lambda row: row.float_branch').value()
+    assert np.allclose(result, expected)

@@ -4,24 +4,28 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        pip install -e .[test]
+        python -m pip install --upgrade pip
+        python -m pip install .[test] func-adl==4.0.0b3
+        python -m pip check
+        python -I -c "import importlib.metadata as m, func_adl_uproot; assert m.version('func-adl') == '4.0.0b3'; print(func_adl_uproot.__file__); print([(n, m.version(n)) for n in ['func-adl', 'qastle', 'numpy', 'awkward', 'awkward-cpp', 'dask', 'dask-awkward', 'uproot', 'vector']])"
     - name: Lint with flake8
       run: |
         flake8
         flake8 --select=C90 --exit-zero --max-complexity=10
     - name: Test with pytest
       run: |
-        pytest --cov=./ --cov-report=xml
+        python -c "import os, pathlib, shutil, subprocess, sys; target = pathlib.Path(os.environ['RUNNER_TEMP']) / 'installed-uproot-tests'; shutil.copytree('tests', target / 'tests'); sys.exit(subprocess.call([sys.executable, '-m', 'pytest', '-ra', '--rootdir=.', '--cov=func_adl_uproot', '--cov-report=xml:' + str(pathlib.Path.cwd() / 'coverage.xml')], cwd=target))"
     - name: Codecov
       uses: codecov/codecov-action@v1.0.13
