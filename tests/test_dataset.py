@@ -46,5 +46,10 @@ def test_incomplete_dictionary_is_not_four_momentum():
             'phi': row.float_branch * 0,
         }.ToFourMomentum()
     )
-    with pytest.raises(TypeError, match='coordinates of a 2D vector, not of a 4D vector'):
-        query.value()
+    # Older Vector defers coordinate validation until a 4D property is used.
+    with pytest.raises((TypeError, ValueError)) as error:
+        query.Select('lambda momentum: momentum.mass').value()
+    if isinstance(error.value, TypeError):
+        assert 'coordinates of a 2D vector, not of a 4D vector' in str(error.value)
+    else:
+        assert 'array does not have longitudinal coordinates' in str(error.value)
