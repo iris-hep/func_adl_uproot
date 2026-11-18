@@ -3,6 +3,7 @@ from func_adl_uproot import UprootDataset
 import asyncio
 
 import numpy as np
+import pytest
 
 
 def test_uproot_dataset():
@@ -36,3 +37,14 @@ def test_literal_dictionary_four_momentum():
     ).Select('lambda momentum: momentum.pt').value()
     expected = source.Select('lambda row: row.float_branch').value()
     assert np.allclose(result, expected)
+
+
+def test_incomplete_dictionary_is_not_four_momentum():
+    query = UprootDataset('tests/scalars_tree_file.root').Select(
+        lambda row: {
+            'pt': row.float_branch,
+            'phi': row.float_branch * 0,
+        }.ToFourMomentum()
+    )
+    with pytest.raises(TypeError, match='coordinates of a 2D vector, not of a 4D vector'):
+        query.value()

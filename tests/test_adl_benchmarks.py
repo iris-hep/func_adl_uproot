@@ -1160,7 +1160,7 @@ def test_adl_benchmark_8():
                 'met': {
                     'pt': event.MET_pt,
                     'phi': event.MET_phi,
-                }.ToFourMomentum(),
+                },
             }
         )
         .Select(
@@ -1208,7 +1208,8 @@ def test_adl_benchmark_8():
                 2
                 * event.leading_other_lepton_p4.pt
                 * event.met.pt
-                * (1 - np.cos(event.leading_other_lepton_p4.deltaphi(event.met)))
+                # cos is periodic, so a wrapped delta-phi is unnecessary here.
+                * (1 - np.cos(event.leading_other_lepton_p4.phi - event.met.phi))
             )
             ** 0.5
         )
