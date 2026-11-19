@@ -13,11 +13,11 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(exclude=['tests']),
-    python_requires=('>=3.8, <3.14'),
+    python_requires=('>=3.10, <3.15'),
     install_requires=[
         'awkward>=2.0.9',
         'dask-awkward>=2023.8.1',
-        'func-adl>=3.2.7, !=3.3.1, !=3.3.2, !=3.3.3',
+        'func-adl>=4.0.0b3',
         'numpy',
         'qastle>=0.18.0',
         'uproot>=5',

@@ -524,6 +524,23 @@ def test_ast_executor_tofourmomentum():
     assert np.allclose(result[2].e.tolist(), [14.14])
 
 
+def test_ast_executor_deltaphi_complete_four_momenta():
+    first = (
+        "{'pt': row.float_branch, 'phi': row.float_branch, "
+        "'eta': row.float_branch * 0, 'mass': row.float_branch * 0}"
+    )
+    second = first.replace("'phi': row.float_branch", "'phi': -row.float_branch")
+    query = ast.parse(
+        "Select(EventDataset('tests/scalars_tree_file.root'), lambda row: "
+        + first + '.ToFourMomentum().deltaphi(' + second + '.ToFourMomentum()))'
+    )
+    phi = np.asarray(ast_executor(ast.parse(
+        "Select(EventDataset('tests/scalars_tree_file.root'), lambda row: row.float_branch)"
+    )))
+    expected = np.arctan2(np.sin(2 * phi), np.cos(2 * phi))
+    assert np.allclose(ast_executor(query), expected)
+
+
 def test_ast_executor_tofourmomentum_mass():
     python_source = (
         "Select(EventDataset('tests/four-vector_tree_file.root', 'tree'),"
