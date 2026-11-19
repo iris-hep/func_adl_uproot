@@ -48,8 +48,6 @@ named_tree_source = '''    def named_tree_inputs(input_files, tree_name, explici
                 try:
                     source[tree_name]
                 except uproot.exceptions.KeyInFileError:
-                    if fail_on_missing_trees:
-                        raise
                     logging.getLogger(__name__).warning(
                         "Skipping input %r: named tree %r is absent", input_file, tree_name
                     )
@@ -82,16 +80,11 @@ def generate_python_source(ast, function_name='run_query'):
         + input_filenames_argument_name
         + '=None, '
         + tree_name_argument_name
-        + '=None, *, fail_on_missing_trees=False):\n'
+        + '=None):\n'
     )
     source += '    import functools, glob, logging, numpy as np\n'
     source += '    import dask_awkward as dak, uproot, vector\n'
     source += '    vector.register_awkward()\n\n'
-    source += (
-        '    if not isinstance(fail_on_missing_trees, bool):\n'
-        + '        raise TypeError("fail_on_missing_trees must be a bool, got "'
-        + ' + repr(fail_on_missing_trees))\n\n'
-    )
     source += remove_not_interpretable_source
     source += named_tree_source
     source += '    return ' + python_ast_to_python_source(python_ast) + '.compute()\n'

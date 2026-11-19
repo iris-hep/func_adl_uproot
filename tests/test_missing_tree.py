@@ -35,27 +35,19 @@ def test_named_missing_tree_default(inputs, reverse, as_qastle, caplog):
     assert "reco" in caplog.text
 
 
-@pytest.mark.parametrize("reverse", [False, True])
-def test_named_missing_tree_strict(inputs, reverse):
-    query = UprootDataset(list(inputs)[:: (-1 if reverse else 1)], "reco").query_ast
-    with pytest.raises(uproot.exceptions.KeyInFileError):
-        ast_executor(query, fail_on_missing_trees=True)
-
-
 def test_all_absent_retains_error(inputs):
     with pytest.raises(ValueError, match="No input contains.*reco"):
         UprootDataset([inputs[0]], "reco").value()
 
 
-def test_runtime_override_and_strict(inputs):
-    function = generate_function(ast.parse("Select(EventDataset(), lambda row: row.value)"))
+def test_runtime_override(inputs):
+    function = generate_function(
+        ast.parse("Select(EventDataset(), lambda row: row.value)")
+    )
     assert ak.to_list(function(list(inputs), "reco")) == [4, 9]
-    with pytest.raises(uproot.exceptions.KeyInFileError):
-        function(list(inputs), "reco", fail_on_missing_trees=True)
 
 
-@pytest.mark.parametrize("strict", [False, True])
-def test_errors_not_suppressed(inputs, tmp_path, strict):
+def test_errors_not_suppressed(inputs, tmp_path):
     corrupt = tmp_path / "corrupt.root"
     corrupt.write_bytes(b"not a ROOT file")
     queries = [
@@ -65,42 +57,40 @@ def test_errors_not_suppressed(inputs, tmp_path, strict):
             UprootDataset(inputs[1], "reco").Select("lambda row: row.absent").query_ast,
             (AttributeError, uproot.exceptions.KeyInFileError),
         ),
-        (ast.parse("UnknownOperation(EventDataset(" + repr(inputs[1]) + ", 'reco'))"), NameError),
+        (
+            ast.parse(
+                "UnknownOperation(EventDataset(" + repr(inputs[1]) + ", 'reco'))"
+            ),
+            NameError,
+        ),
     ]
     for query, error in queries:
         with pytest.raises(error):
-            ast_executor(query, fail_on_missing_trees=strict)
+            ast_executor(query)
 
 
-def test_policy_requires_boolean(inputs):
-    with pytest.raises(TypeError, match="fail_on_missing_trees.*bool"):
-        ast_executor(UprootDataset(inputs[1], "reco").query_ast, fail_on_missing_trees="false")
-
-
-@pytest.mark.parametrize("strict", [False, True])
 @pytest.mark.parametrize("reverse", [False, True])
-def test_known_typed_empty_and_mixed_schema(inputs, tmp_path, strict, reverse):
+def test_known_typed_empty_and_mixed_schema(inputs, tmp_path, reverse):
     empty = tmp_path / "empty.root"
     with uproot.recreate(empty) as output:
         output.mktree("reco", {"value": "int64", "unused": "float64"})
     files = [str(empty), inputs[1]][:: (-1 if reverse else 1)]
     query = UprootDataset(files, "reco").Select("lambda row: row.value")
-    assert ak.to_list(ast_executor(query.query_ast, fail_on_missing_trees=strict)) == [4, 9]
+    assert ak.to_list(ast_executor(query.query_ast)) == [4, 9]
     empty_query = UprootDataset(str(empty), "reco").Select("lambda row: row.value")
-    result = ast_executor(empty_query.query_ast, fail_on_missing_trees=strict)
+    result = ast_executor(empty_query.query_ast)
     assert ak.to_list(result) == []
     assert str(ak.type(result)) == "0 * int64"
     rejected = query.Where("lambda value: value < 0")
-    assert ak.to_list(ast_executor(rejected.query_ast, fail_on_missing_trees=strict)) == []
+    assert ak.to_list(ast_executor(rejected.query_ast)) == []
 
 
-@pytest.mark.parametrize("strict", [False, True])
-def test_wrong_object_not_suppressed(tmp_path, strict):
+def test_wrong_object_not_suppressed(tmp_path):
     path = tmp_path / "wrong.root"
     with uproot.recreate(path) as output:
         output["reco"] = "not a tree"
     with pytest.raises((TypeError, AttributeError, ValueError)):
-        ast_executor(UprootDataset(str(path), "reco").query_ast, fail_on_missing_trees=strict)
+        ast_executor(UprootDataset(str(path), "reco").query_ast)
 
 
 @pytest.mark.parametrize("reverse", [False, True])
