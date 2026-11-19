@@ -27,5 +27,7 @@ def test_internal_subscript_marker(operation, roundtrip):
     if operation == "Where":
         expected = [[value for value in row if value > 0] for row in values]
     else:
-        expected = [sorted(row, reverse=operation == "OrderByDescending") for row in values]
+        expected = [
+            sorted(row, reverse=operation == "OrderByDescending") for row in values
+        ]
     assert ast_executor(query).tolist() == expected
