@@ -438,7 +438,10 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 + "(logging.getLogger(__name__).info('Using treename='"
                 + ' + repr(tree_name_to_use)),'
                 + ' uproot.dask({input_file: tree_name_to_use'
-                + ' for input_file in input_files}, filter_branch='
+                + ' for input_file in named_tree_inputs(input_files, tree_name_to_use, '
+                + tree_name_argument_name + ' is not None or '
+                + repr(len(node.args) >= 2 and ast.literal_eval(node.args[1]) is not None)
+                + ')}, filter_branch='
                 + branch_filter_name
                 + '))[1])'
                 + '('

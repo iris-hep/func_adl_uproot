@@ -38,6 +38,32 @@ remove_not_interpretable_source = (
 )
 
 
+named_tree_source = '''    def named_tree_inputs(input_files, tree_name, explicit_tree):
+        if not explicit_tree:
+            return input_files
+        matching = []
+        for input_file in input_files:
+            with uproot.open(input_file) as source:
+                try:
+                    source[tree_name]
+                except uproot.exceptions.KeyInFileError:
+                    if fail_on_missing_trees:
+                        raise
+                    logging.getLogger(__name__).warning(
+                        "Skipping input %r: named tree %r is absent", input_file, tree_name
+                    )
+                else:
+                    matching.append(input_file)
+        if not matching:
+            raise ValueError(
+                f"No input contains named tree {tree_name!r}; "
+                f"output schema is unavailable for inputs {input_files!r}"
+            )
+        return matching
+
+'''
+
+
 def python_ast_to_python_source(python_ast):
     return PythonSourceGeneratorTransformer().get_rep(python_ast)
 
@@ -55,11 +81,17 @@ def generate_python_source(ast, function_name='run_query'):
         + input_filenames_argument_name
         + '=None, '
         + tree_name_argument_name
-        + '=None):\n'
+        + '=None, *, fail_on_missing_trees=False):\n'
     )
     source += '    import functools, logging, numpy as np, dask_awkward as dak, uproot, vector\n'
     source += '    vector.register_awkward()\n\n'
+    source += (
+        '    if not isinstance(fail_on_missing_trees, bool):\n'
+        + '        raise TypeError("fail_on_missing_trees must be a bool, got "'
+        + ' + repr(fail_on_missing_trees))\n\n'
+    )
     source += remove_not_interpretable_source
+    source += named_tree_source
     source += '    return ' + python_ast_to_python_source(python_ast) + '.compute()\n'
     return source
 
