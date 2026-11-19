@@ -39,7 +39,8 @@ remove_not_interpretable_source = (
 
 
 named_tree_source = '''    def named_tree_inputs(input_files, tree_name, explicit_tree):
-        if not explicit_tree:
+        # Pattern expansion belongs to Uproot; preflight only concrete paths.
+        if not explicit_tree or any(glob.has_magic(str(path)) for path in input_files):
             return input_files
         matching = []
         for input_file in input_files:
@@ -83,7 +84,7 @@ def generate_python_source(ast, function_name='run_query'):
         + tree_name_argument_name
         + '=None, *, fail_on_missing_trees=False):\n'
     )
-    source += '    import functools, logging, numpy as np, dask_awkward as dak, uproot, vector\n'
+    source += '    import functools, glob, logging, numpy as np, dask_awkward as dak, uproot, vector\n'
     source += '    vector.register_awkward()\n\n'
     source += (
         '    if not isinstance(fail_on_missing_trees, bool):\n'

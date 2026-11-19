@@ -113,3 +113,8 @@ def test_populated_missing_output_in_mixed_inputs(inputs, tmp_path, reverse):
     files = [inputs[1], str(missing_branch)][::(-1 if reverse else 1)]
     with pytest.raises(ValueError, match='have no TBranches in common'):
         UprootDataset(files, 'reco').Select('lambda row: row.value').value()
+
+
+def test_filename_pattern_preserves_uproot_expansion(inputs):
+    pattern = inputs[1].replace('populated.root', 'pop*.root')
+    assert ak.to_list(UprootDataset(pattern, 'reco').Select('lambda row: row.value').value()) == [4, 9]
