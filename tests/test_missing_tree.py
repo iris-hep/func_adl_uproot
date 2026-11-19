@@ -117,4 +117,5 @@ def test_populated_missing_output_in_mixed_inputs(inputs, tmp_path, reverse):
 
 def test_filename_pattern_preserves_uproot_expansion(inputs):
     pattern = inputs[1].replace('populated.root', 'pop*.root')
-    assert ak.to_list(UprootDataset(pattern, 'reco').Select('lambda row: row.value').value()) == [4, 9]
+    query = UprootDataset(pattern, 'reco').Select('lambda row: row.value')
+    assert ak.to_list(query.value()) == [4, 9]

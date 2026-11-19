@@ -84,7 +84,8 @@ def generate_python_source(ast, function_name='run_query'):
         + tree_name_argument_name
         + '=None, *, fail_on_missing_trees=False):\n'
     )
-    source += '    import functools, glob, logging, numpy as np, dask_awkward as dak, uproot, vector\n'
+    source += '    import functools, glob, logging, numpy as np\n'
+    source += '    import dask_awkward as dak, uproot, vector\n'
     source += '    vector.register_awkward()\n\n'
     source += (
         '    if not isinstance(fail_on_missing_trees, bool):\n'
