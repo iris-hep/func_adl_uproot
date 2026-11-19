@@ -567,8 +567,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         else:
             slice_node = node.predicate.body
         node.predicate.body = ast.Subscript(
-            value=ast.Name(id=subscriptable), slice=slice_node, short_circuit=True
+            value=ast.Name(id=subscriptable), slice=slice_node
         )
+        node.predicate.body.short_circuit = True
         call_node = ast.Call(func=node.predicate, args=[node.source])
         node.rep = self.get_rep(call_node)
         node._depth = node.source._depth
@@ -683,8 +684,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         else:
             slice_node = node.key_selector.body
         node.key_selector.body = ast.Subscript(
-            value=ast.Name(id=subscriptable), slice=slice_node, short_circuit=True
+            value=ast.Name(id=subscriptable), slice=slice_node
         )
+        node.key_selector.body.short_circuit = True
         call_node = ast.Call(func=node.key_selector, args=[node.source])
         node.rep = self.get_rep(call_node)
         node._depth = node.source._depth
