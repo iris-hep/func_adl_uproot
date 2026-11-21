@@ -658,6 +658,88 @@ def test_ast_executor_tofourmomenta_sum():
 #     assert ast_executor(python_ast).tolist() == [0, -1]
 
 
+@pytest.mark.parametrize("operator", ["OrderBy", "OrderByDescending"])
+@pytest.mark.parametrize("qastle_input", [False, True])
+def test_executor_rejects_event_ordering(operator, qastle_input):
+    source = (
+        f"{operator}(EventDataset('not-opened.root', 'events'), lambda row: row.value)"
+    )
+    query = ast.parse(source)
+    if qastle_input:
+        query = qastle.python_ast_to_text_ast(query)
+    with pytest.raises(ValueError, match=f"{operator} cannot sort events"):
+        ast_executor(query)
+
+
+@pytest.mark.parametrize(
+    "operator,expected",
+    [
+        ("OrderBy", [[], [1, -1, -2, 2], [0]]),
+        ("OrderByDescending", [[], [-2, 2, 1, -1], [0]]),
+    ],
+)
+def test_executor_orders_inside_events_and_preserves_ties(tmp_path, operator, expected):
+    import uproot
+
+    files = []
+    for index in range(2):
+        path = tmp_path / f"file_{index}.root"
+        with uproot.recreate(path) as output:
+            tree = output.mktree("events", {"values": "var * int64"})
+            tree.extend({"values": ak.Array([[], [-2, 1, 2, -1], [0]])})
+        files.append(str(path))
+
+    source = (
+        f"Select(EventDataset({files!r}, 'events'), "
+        f"lambda row: row.values.{operator}(lambda item: abs(item)))"
+    )
+    assert ak.to_list(ast_executor(ast.parse(source))) == expected * 2
+
+
+@pytest.mark.parametrize("qastle_input", [False, True])
+@pytest.mark.parametrize(
+    "operator,expected",
+    [
+        ("ThenBy", [11, 14, 12, 10, 13]),
+        ("ThenByDescending", [12, 11, 14, 13, 10]),
+        ("ThenByTwice", [14, 11, 12, 10, 13]),
+    ],
+)
+def test_executor_thenby_inside_events(tmp_path, qastle_input, operator, expected):
+    import uproot
+
+    path = tmp_path / "events.root"
+    with uproot.recreate(path) as output:
+        tree = output.mktree("events", {key: "var * int64" for key in ("a", "b", "id")})
+        tree.extend(
+            {
+                "a": ak.Array([[], [2, 1, 1, 2, 1]]),
+                "b": ak.Array([[], [1, 2, 3, 5, 2]]),
+                "id": ak.Array([[], [10, 11, 12, 13, 14]]),
+            }
+        )
+    keys = (
+        ".ThenBy(lambda item: item.b).ThenByDescending(lambda item: item.id)"
+        if operator == "ThenByTwice"
+        else f".{operator}(lambda item: item.b)"
+    )
+    source = (
+        f"Select(EventDataset({str(path)!r}, 'events'), lambda row: "
+        "Zip({'a': row.a, 'b': row.b, 'id': row.id})"
+        f".OrderBy(lambda item: item.a){keys}.Select(lambda item: item.id))"
+    )
+    query = ast.parse(source)
+    if qastle_input:
+        query = qastle.python_ast_to_text_ast(query)
+    assert ak.to_list(ast_executor(query)) == [[], expected]
+
+
+def test_thenby_requires_an_immediately_preceding_sort():
+    query = ast.parse("ThenBy(EventDataset(), lambda row: row.value)")
+    with pytest.raises(ValueError, match="ThenBy must immediately follow"):
+        ast_executor(query)
+
+
 @pytest.mark.parametrize('qastle_input', [False, True])
 @pytest.mark.filterwarnings('error:.*unexpected keyword argument:DeprecationWarning')
 def test_ast_executor_orderby_same_vector_branch(qastle_input):

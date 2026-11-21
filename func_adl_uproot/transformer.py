@@ -1,8 +1,10 @@
 import ast
 import sys
 
-from qastle import Contains, Select
+from qastle import Contains, OrderBy, OrderByDescending, Select
 
+
+_then_by_nodes = {'ThenBy': OrderBy, 'ThenByDescending': OrderByDescending}
 
 allowed_modules = ['np']
 
@@ -458,6 +460,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 + ')'
             )
         else:
+            if self._then_by_name(node) is not None:
+                return self._visit_then_by(node)
             if isinstance(node.func, ast.Attribute) and node.func.attr == 'ToFourMomentum':
                 value_rep = self.get_rep(node.func.value)
                 node.rep = (
@@ -698,6 +702,50 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         )
         return node
 
+    @staticmethod
+    def _then_by_name(node):
+        if isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name) and node.func.id in _then_by_nodes:
+                return node.func.id
+            if isinstance(node.func, ast.Attribute) and node.func.attr in _then_by_nodes:
+                return node.func.attr
+        return None
+
+    def _visit_then_by(self, node):
+        source = node
+        clauses = []
+        while (operation := self._then_by_name(source)) is not None:
+            args = source.args
+            if isinstance(source.func, ast.Attribute):
+                args = [source.func.value] + args
+            if (
+                not args
+                or len(args) + len(source.keywords) != 2
+                or any(keyword.arg != 'key_selector' for keyword in source.keywords)
+                or any(isinstance(arg, ast.Starred) for arg in args)
+            ):
+                raise ValueError(
+                    f'{operation} requires a source and one lambda key: {ast.unparse(source)}'
+                )
+            key = args[1] if len(args) == 2 else source.keywords[0].value
+            clauses.append((_then_by_nodes[operation], key))
+            source = args[0]
+
+        if not isinstance(source, (OrderBy, OrderByDescending)):
+            raise ValueError(
+                f'{self._then_by_name(node)} must immediately follow an ordering operation: '
+                f'{ast.unparse(node)}'
+            )
+
+        # Stable sorts from the least significant key to the primary key preserve ties.
+        ordered = source.source
+        for order_type, key in clauses:
+            ordered = order_type(source=ordered, key_selector=key)
+        ordered = type(source)(source=ordered, key_selector=source.key_selector)
+        node.rep = self.get_rep(ordered)
+        node._depth = ordered._depth
+        return node
+
     def visit_OrderBy(self, node, ascending=True):
         if type(node.key_selector) is not ast.Lambda:
             raise TypeError(
@@ -710,6 +758,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 + str(len(node.key_selector.args.args))
             )
         self.visit(node.source)
+        if node.source._depth == 0:
+            operator = 'OrderBy' if ascending else 'OrderByDescending'
+            raise ValueError(
+                f'{operator} cannot sort events. Sort a collection inside each event.'
+            )
         node.key_selector.args.args[0]._depth = node.source._depth + 1
         subscriptable = node.key_selector.args.args[0].arg
         self.visit(node.key_selector)
@@ -721,7 +774,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             + repr(node.source._depth)
             + ', ascending='
             + str(ascending)
-            + ')'
+            + ', stable=True)'
         )
         if sys.version_info[0] == 3 and sys.version_info[1] < 9:
             slice_node = ast.Index(node.key_selector.body)
