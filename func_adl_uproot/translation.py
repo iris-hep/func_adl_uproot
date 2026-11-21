@@ -54,11 +54,20 @@ named_tree_source = '''    def named_tree_inputs(input_files, tree_name, explici
                 else:
                     matching.append(input_file)
         if not matching:
-            raise ValueError(
+            raise NoMatchingTreeError(
                 f"No input contains named tree {tree_name!r}; "
                 f"output schema is unavailable for inputs {input_files!r}"
             )
         return matching
+
+'''
+
+
+event_filter_source = '''    def filter_events(rows, apply_filter):
+        # Skip event predicates when the reader can prove there are no rows.
+        if isinstance(rows, dak.Array) and rows.known_divisions and rows.divisions[-1] == 0:
+            return rows
+        return apply_filter(rows)
 
 '''
 
@@ -74,6 +83,8 @@ def generate_python_source(ast, function_name='run_query'):
         python_ast = copy.deepcopy(ast)
     python_ast = qastle.insert_linq_nodes(python_ast)
     source = (
+        'class NoMatchingTreeError(ValueError):\n'
+        '    """No input contains the explicitly requested tree."""\n\n\n'
         'def '
         + function_name
         + '('
@@ -87,12 +98,13 @@ def generate_python_source(ast, function_name='run_query'):
     source += '    vector.register_awkward()\n\n'
     source += remove_not_interpretable_source
     source += named_tree_source
+    source += event_filter_source
     source += '    return ' + python_ast_to_python_source(python_ast) + '.compute()\n'
     return source
 
 
 def generate_function(ast, function_name='run_query'):
     source = generate_python_source(ast)
-    captured_locals = dict()
-    exec(source, None, captured_locals)
-    return eval(function_name, None, captured_locals)
+    namespace = {}
+    exec(source, namespace)
+    return namespace[function_name]

@@ -7,7 +7,12 @@ import pytest
 import qastle
 import uproot
 
-from func_adl_uproot import UprootDataset, ast_executor, generate_function
+from func_adl_uproot import (
+    UprootDataset,
+    ast_executor,
+    generate_function,
+    generate_python_source,
+)
 
 
 @pytest.fixture
@@ -38,6 +43,52 @@ def test_named_missing_tree_default(inputs, reverse, as_qastle, caplog):
 def test_all_absent_retains_error(inputs):
     with pytest.raises(ValueError, match="No input contains.*reco"):
         UprootDataset([inputs[0]], "reco").value()
+
+
+def test_generated_module_identifies_missing_tree(tmp_path):
+    keyless = tmp_path / "keyless.root"
+    with uproot.recreate(keyless):
+        pass
+    namespace = {}
+    exec(generate_python_source(ast.parse("EventDataset(None, 'reco')")), namespace)
+    with pytest.raises(
+        namespace["NoMatchingTreeError"], match="No input contains.*reco"
+    ):
+        namespace["run_query"](str(keyless))
+
+
+@pytest.mark.parametrize("as_qastle", [False, True])
+def test_zero_entry_tree_does_not_require_filter_field(tmp_path, as_qastle):
+    empty = tmp_path / "empty.root"
+    with uproot.recreate(empty) as output:
+        output.mktree("reco", {"value": "int64"})
+    query = (
+        UprootDataset(str(empty), "reco")
+        .Where("lambda row: row.trigger > 0")
+        .Select("lambda row: {'value': row.value}")
+        .query_ast
+    )
+    if as_qastle:
+        query = qastle.python_ast_to_text_ast(query)
+    result = ast_executor(query)
+    assert ak.to_list(result) == []
+    assert str(ak.type(result)) == "0 * {value: int64}"
+
+
+def test_zero_entry_tree_still_requires_projected_field(tmp_path):
+    empty = tmp_path / "empty.root"
+    with uproot.recreate(empty) as output:
+        output.mktree("reco", {"value": "int64"})
+    query = (
+        UprootDataset(str(empty), "reco")
+        .Where("lambda row: row.trigger > 0")
+        .Select("lambda row: row.absent")
+        .query_ast
+    )
+    with pytest.raises(
+        (AttributeError, uproot.exceptions.KeyInFileError), match="absent"
+    ):
+        ast_executor(query)
 
 
 def test_runtime_override(inputs):

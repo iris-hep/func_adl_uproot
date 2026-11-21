@@ -573,8 +573,12 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             slice_node = node.predicate.body
         node.predicate.body = ast.Subscript(value=ast.Name(id=subscriptable), slice=slice_node)
         node.predicate.body.short_circuit = True
-        call_node = ast.Call(func=node.predicate, args=[node.source])
-        node.rep = self.get_rep(call_node)
+        if node.source._depth == 0:
+            node.rep = 'filter_events(' + self.get_rep(node.source) + ', '
+            node.rep += self.get_rep(node.predicate) + ')'
+        else:
+            call_node = ast.Call(func=node.predicate, args=[node.source])
+            node.rep = self.get_rep(call_node)
         node._depth = node.source._depth
         self._projection_stack.pop()
         return node
