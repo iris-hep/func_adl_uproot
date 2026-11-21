@@ -1,8 +1,10 @@
 import ast
+import copy
 
 from ast import parse
 
 from func_adl import EventDataset
+from func_adl.ast.func_adl_ast_utils import change_extension_functions_to_calls
 from func_adl.util_ast import parse_as_ast
 from qastle import unwrap_ast
 
@@ -34,6 +36,11 @@ class UprootDataset(EventDataset):
     def Select(self, f, known_types=None):
         selector = _DictionaryMomentum().visit(parse_as_ast(f, 'Select'))
         return super().Select(selector, known_types={} if known_types is None else known_types)
+
+    def clean_ast(self) -> ast.AST:
+        return change_extension_functions_to_calls(
+            copy.deepcopy(super().clean_ast()), function_names=['Skip', 'Take']
+        )
 
     def value(self):
         """Materialize this backend's query as an Awkward result."""

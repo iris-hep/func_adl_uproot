@@ -6,8 +6,9 @@ import pytest
 import awkward as ak
 
 import qastle
+import uproot
 
-from func_adl_uproot import ast_executor
+from func_adl_uproot import UprootDataset, ast_executor, generate_function
 
 
 def test_ast_executor():
@@ -1055,3 +1056,119 @@ def test_ast_executor_where_of_call():
     )
     python_ast = ast.parse(python_source)
     assert ast_executor(python_ast).tolist() == [-1]
+
+
+@pytest.fixture
+def sequence_events(tmp_path):
+    files = []
+    for start in (0, 3):
+        path = tmp_path / f"events_{start}.root"
+        with uproot.recreate(path) as output:
+            tree = output.mktree("events", {"value": "int64", "items": "var * int64"})
+            tree.extend(
+                {
+                    "value": np.arange(start, start + 3, dtype=np.int64),
+                    "items": ak.Array([[], [10, 11, 12], [20]]),
+                }
+            )
+        files.append(str(path))
+    return UprootDataset(files, "events")
+
+
+@pytest.mark.parametrize("qastle_input", [False, True])
+def test_skip_take_filtered_records_across_files(sequence_events, qastle_input):
+    query = (
+        sequence_events.Where("lambda row: row.value % 2 == 1")
+        .Select("lambda row: {'value': row.value}")
+        .Skip(n=1)
+        .Take(2)
+    )
+    if qastle_input:
+        result = ast_executor(qastle.python_ast_to_text_ast(query.query_ast))
+    else:
+        result = query.value()
+    assert ak.to_list(result) == [{"value": 3}, {"value": 5}]
+
+
+@pytest.mark.parametrize(
+    "operator,count,expected",
+    [
+        ("Skip", -2, [0, 1, 2, 3, 4, 5]),
+        ("Skip", 0, [0, 1, 2, 3, 4, 5]),
+        ("Skip", 20, []),
+        ("Take", -2, []),
+        ("Take", 0, []),
+        ("Take", 20, [0, 1, 2, 3, 4, 5]),
+    ],
+)
+def test_skip_take_counts(sequence_events, operator, count, expected):
+    query = sequence_events.Select("lambda row: row.value")
+    result = getattr(query, operator)(count).value()
+    assert ak.to_list(result) == expected
+    assert str(ak.type(result)) == f"{len(expected)} * int64"
+
+
+@pytest.mark.parametrize("qastle_input", [False, True])
+def test_skip_take_nested_sequences(sequence_events, qastle_input):
+    count = 1
+    query = sequence_events.Select(lambda row: row.items.Skip(n=count).Take(1))
+    query_ast = query.clean_ast()
+    if qastle_input:
+        query_ast = qastle.python_ast_to_text_ast(query_ast)
+    assert ak.to_list(ast_executor(query_ast)) == [[], [11], [], [], [11], []]
+
+
+def test_raw_method_and_function_keyword_counts(sequence_events):
+    source = "Take(Select(EventDataset(), lambda row: row.value).Skip(n=2), n=2)"
+    run_query = generate_function(ast.parse(source))
+    files = ast.literal_eval(sequence_events.query_ast.args[0])
+    assert ak.to_list(run_query(input_filenames=files, tree_name="events")) == [2, 3]
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "Skip()",
+        "Skip(EventDataset())",
+        "Take(EventDataset(), 1, n=2)",
+        "EventDataset().Skip(other=1)",
+        "EventDataset().Take(*[1])",
+        "Skip(EventDataset(), **{'n': 1})",
+        "Take(EventDataset(), True)",
+        "Skip(EventDataset(), 1.25)",
+        "Skip(EventDataset(), count)",
+    ],
+)
+def test_skip_take_reject_invalid_counts(source):
+    with pytest.raises(ValueError, match=r"(Skip|Take) (requires|count must be)"):
+        generate_function(ast.parse(source))
+
+
+@pytest.mark.parametrize(
+    "operator,argument,expected",
+    [("First", [], 1), ("Last", [], 5), ("ElementAt", [1], 3)],
+)
+def test_existing_sequence_terminals_after_filter(
+    sequence_events, operator, argument, expected
+):
+    query = sequence_events.Where("lambda row: row.value % 2 == 1").Select(
+        "lambda row: row.value"
+    )
+    terminal = ast.Call(
+        func=ast.Name(id=operator, ctx=ast.Load()),
+        args=[query.query_ast, *[ast.Constant(value=count) for count in argument]],
+        keywords=[],
+    )
+    assert ast_executor(terminal) == expected
+
+
+@pytest.mark.parametrize("operator", ["First", "Last"])
+def test_existing_terminal_rejects_empty_filtered_stream(sequence_events, operator):
+    query = sequence_events.Where("lambda row: row.value < 0").Select(
+        "lambda row: row.value"
+    )
+    terminal = ast.Call(
+        func=ast.Name(id=operator, ctx=ast.Load()), args=[query.query_ast], keywords=[]
+    )
+    with pytest.raises(IndexError):
+        ast_executor(terminal)
