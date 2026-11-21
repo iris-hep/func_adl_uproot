@@ -2,8 +2,7 @@ import numpy as np
 
 from func_adl_uproot import UprootDataset
 
-
-ds = UprootDataset('tests/Run2012B_SingleMu_1000.root', 'Events')
+ds = UprootDataset("tests/Run2012B_SingleMu_1000.root", "Events")
 
 expected_1 = np.array(
     [
@@ -957,7 +956,9 @@ def test_adl_benchmark_1():
         hist,
         bin_edges,
     ) = np.histogram(query.value(), 100, (0, 2000))
-    assert np.allclose(np.stack((bin_edges[:-1], bin_edges[1:], hist), axis=1), expected_1)
+    assert np.allclose(
+        np.stack((bin_edges[:-1], bin_edges[1:], hist), axis=1), expected_1
+    )
 
 
 def test_adl_benchmark_2():
@@ -966,12 +967,14 @@ def test_adl_benchmark_2():
         hist,
         bin_edges,
     ) = np.histogram(query.value(), 100, (15, 60))
-    assert np.allclose(np.stack((bin_edges[:-1], bin_edges[1:], hist), axis=1), expected_2)
+    assert np.allclose(
+        np.stack((bin_edges[:-1], bin_edges[1:], hist), axis=1), expected_2
+    )
 
 
 def test_adl_benchmark_3():
     query = ds.SelectMany(
-        lambda event: {'pT': event.Jet_pt, 'eta': event.Jet_eta}
+        lambda event: {"pT": event.Jet_pt, "eta": event.Jet_eta}
         .Zip()
         .Where(lambda jet: abs(jet.eta) < 1)
         .Select(lambda jet: jet.pT)
@@ -980,33 +983,37 @@ def test_adl_benchmark_3():
         hist,
         bin_edges,
     ) = np.histogram(query.value(), 100, (15, 60))
-    assert np.allclose(np.stack((bin_edges[:-1], bin_edges[1:], hist), axis=1), expected_3)
+    assert np.allclose(
+        np.stack((bin_edges[:-1], bin_edges[1:], hist), axis=1), expected_3
+    )
 
 
 def test_adl_benchmark_4():
-    query = ds.Where(lambda event: event.Jet_pt.Where(lambda pT: pT > 40).Count() >= 2).Select(
-        lambda event: event.MET_pt
-    )
+    query = ds.Where(
+        lambda event: event.Jet_pt.Where(lambda pT: pT > 40).Count() >= 2
+    ).Select(lambda event: event.MET_pt)
     (
         hist,
         bin_edges,
     ) = np.histogram(query.value(), 100, (0, 2000))
-    assert np.allclose(np.stack((bin_edges[:-1], bin_edges[1:], hist), axis=1), expected_4)
+    assert np.allclose(
+        np.stack((bin_edges[:-1], bin_edges[1:], hist), axis=1), expected_4
+    )
 
 
 def test_adl_benchmark_5():
     query = ds.Where(
         lambda event: Zip(
             {
-                'p4': Zip(
+                "p4": Zip(
                     {
-                        'pt': event.Muon_pt,
-                        'eta': event.Muon_eta,
-                        'phi': event.Muon_phi,
-                        'mass': event.Muon_mass,
+                        "pt": event.Muon_pt,
+                        "eta": event.Muon_eta,
+                        "phi": event.Muon_phi,
+                        "mass": event.Muon_mass,
                     }
                 ).ToFourMomenta(),
-                'charge': event.Muon_charge,
+                "charge": event.Muon_charge,
             }
         )
         .Choose(2)
@@ -1020,7 +1027,9 @@ def test_adl_benchmark_5():
         hist,
         bin_edges,
     ) = np.histogram(query.value(), 100, (0, 2000))
-    assert np.allclose(np.stack((bin_edges[:-1], bin_edges[1:], hist), axis=1), expected_5)
+    assert np.allclose(
+        np.stack((bin_edges[:-1], bin_edges[1:], hist), axis=1), expected_5
+    )
 
 
 def test_adl_benchmark_6():
@@ -1029,22 +1038,22 @@ def test_adl_benchmark_6():
         .Select(
             lambda event: Zip(
                 {
-                    'p4': {
-                        'pt': event.Jet_pt,
-                        'eta': event.Jet_eta,
-                        'phi': event.Jet_phi,
-                        'mass': event.Jet_mass,
+                    "p4": {
+                        "pt": event.Jet_pt,
+                        "eta": event.Jet_eta,
+                        "phi": event.Jet_phi,
+                        "mass": event.Jet_mass,
                     }
                     .Zip()
                     .ToFourMomenta(),
-                    'btag': event.Jet_btag,
+                    "btag": event.Jet_btag,
                 }
             )
             .Choose(3)
             .Select(
                 lambda triplet: {
-                    'btag_values': triplet.Select(lambda jet: jet.btag),
-                    'p4': triplet.ElementAt(0).p4
+                    "btag_values": triplet.Select(lambda jet: jet.btag),
+                    "p4": triplet.ElementAt(0).p4
                     + triplet.ElementAt(1).p4
                     + triplet.ElementAt(2).p4,
                 }
@@ -1054,8 +1063,8 @@ def test_adl_benchmark_6():
         )
         .Select(
             lambda best_trijet: {
-                'trijet_pt': best_trijet.p4.pt,
-                'max_btag_value': best_trijet.btag_values.Max(),
+                "trijet_pt": best_trijet.p4.pt,
+                "max_btag_value": best_trijet.btag_values.Max(),
             }
         )
     )
@@ -1063,49 +1072,53 @@ def test_adl_benchmark_6():
     (
         hist_1,
         bin_edges_1,
-    ) = np.histogram(result['trijet_pt'].tolist(), 100, (15, 40))
-    assert np.allclose(np.stack((bin_edges_1[:-1], bin_edges_1[1:], hist_1), axis=1), expected_6_1)
+    ) = np.histogram(result["trijet_pt"].tolist(), 100, (15, 40))
+    assert np.allclose(
+        np.stack((bin_edges_1[:-1], bin_edges_1[1:], hist_1), axis=1), expected_6_1
+    )
     (
         hist_2,
         bin_edges_2,
-    ) = np.histogram(result['max_btag_value'], 100, (0, 1))
-    assert np.allclose(np.stack((bin_edges_2[:-1], bin_edges_2[1:], hist_2), axis=1), expected_6_2)
+    ) = np.histogram(result["max_btag_value"], 100, (0, 1))
+    assert np.allclose(
+        np.stack((bin_edges_2[:-1], bin_edges_2[1:], hist_2), axis=1), expected_6_2
+    )
 
 
 def test_adl_benchmark_7():
     query = (
         ds.Select(
             lambda event: {
-                'jets': Zip(
+                "jets": Zip(
                     {
-                        'pt': event.Jet_pt,
-                        'eta': event.Jet_eta,
-                        'phi': event.Jet_phi,
-                        'mass': event.Jet_mass,
+                        "pt": event.Jet_pt,
+                        "eta": event.Jet_eta,
+                        "phi": event.Jet_phi,
+                        "mass": event.Jet_mass,
                     }
                 ).ToFourMomenta(),
-                'electrons': Zip(
+                "electrons": Zip(
                     {
-                        'pt': event.Electron_pt,
-                        'eta': event.Electron_eta,
-                        'phi': event.Electron_phi,
-                        'mass': event.Electron_mass,
+                        "pt": event.Electron_pt,
+                        "eta": event.Electron_eta,
+                        "phi": event.Electron_phi,
+                        "mass": event.Electron_mass,
                     }
                 ).ToFourMomenta(),
-                'muons': Zip(
+                "muons": Zip(
                     {
-                        'pt': event.Muon_pt,
-                        'eta': event.Muon_eta,
-                        'phi': event.Muon_phi,
-                        'mass': event.Muon_mass,
+                        "pt": event.Muon_pt,
+                        "eta": event.Muon_eta,
+                        "phi": event.Muon_phi,
+                        "mass": event.Muon_mass,
                     }
                 ).ToFourMomenta(),
             }
         )
         .Select(
             lambda event: {
-                'good_jets': event.jets.Where(lambda jet: jet.pt > 30),
-                'good_leptons': event.electrons.Concat(event.muons).Where(
+                "good_jets": event.jets.Where(lambda jet: jet.pt > 30),
+                "good_leptons": event.electrons.Concat(event.muons).Where(
                     lambda lepton: lepton.pt > 10
                 ),
             }
@@ -1124,55 +1137,57 @@ def test_adl_benchmark_7():
         hist,
         bin_edges,
     ) = np.histogram(query.value(), 100, (15, 200))
-    assert np.allclose(np.stack((bin_edges[:-1], bin_edges[1:], hist), axis=1), expected_7)
+    assert np.allclose(
+        np.stack((bin_edges[:-1], bin_edges[1:], hist), axis=1), expected_7
+    )
 
 
 def test_adl_benchmark_8():
     query = (
         ds.Select(
             lambda event: {
-                'electrons': Zip(
+                "electrons": Zip(
                     {
-                        'p4': Zip(
+                        "p4": Zip(
                             {
-                                'pt': event.Electron_pt,
-                                'eta': event.Electron_eta,
-                                'phi': event.Electron_phi,
-                                'mass': event.Electron_mass,
+                                "pt": event.Electron_pt,
+                                "eta": event.Electron_eta,
+                                "phi": event.Electron_phi,
+                                "mass": event.Electron_mass,
                             }
                         ).ToFourMomenta(),
-                        'charge': event.Electron_charge,
+                        "charge": event.Electron_charge,
                     }
                 ),
-                'muons': Zip(
+                "muons": Zip(
                     {
-                        'p4': Zip(
+                        "p4": Zip(
                             {
-                                'pt': event.Muon_pt,
-                                'eta': event.Muon_eta,
-                                'phi': event.Muon_phi,
-                                'mass': event.Muon_mass,
+                                "pt": event.Muon_pt,
+                                "eta": event.Muon_eta,
+                                "phi": event.Muon_phi,
+                                "mass": event.Muon_mass,
                             }
                         ).ToFourMomenta(),
-                        'charge': event.Muon_charge,
+                        "charge": event.Muon_charge,
                     }
                 ),
-                'met': {
-                    'pt': event.MET_pt,
-                    'phi': event.MET_phi,
+                "met": {
+                    "pt": event.MET_pt,
+                    "phi": event.MET_phi,
                 },
             }
         )
         .Select(
             lambda event: {
-                'leptons': event.electrons.Concat(event.muons),
-                'electron_pairs': event.electrons.Choose(2).Where(
+                "leptons": event.electrons.Concat(event.muons),
+                "electron_pairs": event.electrons.Choose(2).Where(
                     lambda pair: pair.ElementAt(0).charge * pair.ElementAt(1).charge < 0
                 ),
-                'muon_pairs': event.muons.Choose(2).Where(
+                "muon_pairs": event.muons.Choose(2).Where(
                     lambda pair: pair.ElementAt(0).charge * pair.ElementAt(1).charge < 0
                 ),
-                'met': event.met,
+                "met": event.met,
             }
         )
         .Where(
@@ -1181,25 +1196,27 @@ def test_adl_benchmark_8():
         )
         .Select(
             lambda event: {
-                'leptons': event.leptons,
-                'best_pair': event.electron_pairs.Concat(event.muon_pairs)
+                "leptons": event.leptons,
+                "best_pair": event.electron_pairs.Concat(event.muon_pairs)
                 .OrderBy(
-                    lambda pair: abs((pair.ElementAt(0).p4 + pair.ElementAt(1).p4).mass - 91.2)
+                    lambda pair: abs(
+                        (pair.ElementAt(0).p4 + pair.ElementAt(1).p4).mass - 91.2
+                    )
                 )
                 .First(),
-                'met': event.met,
+                "met": event.met,
             }
         )
         .Select(
             lambda event: {
-                'leading_other_lepton_p4': event.leptons.Where(
+                "leading_other_lepton_p4": event.leptons.Where(
                     lambda lepton: lepton.p4.pt != event.best_pair.ElementAt(0).p4.pt
                     and lepton.p4.pt != event.best_pair.ElementAt(1).p4.pt
                 )
                 .OrderBy(lambda lepton: lepton.p4.pt)
                 .Last()
                 .p4,
-                'met': event.met,
+                "met": event.met,
             }
         )
         # Quotes needed around lambda here due to https://github.com/iris-hep/func_adl/issues/127
@@ -1218,4 +1235,6 @@ def test_adl_benchmark_8():
         hist,
         bin_edges,
     ) = np.histogram(query.value(), 100, (15, 250))
-    assert np.allclose(np.stack((bin_edges[:-1], bin_edges[1:], hist), axis=1), expected_8)
+    assert np.allclose(
+        np.stack((bin_edges[:-1], bin_edges[1:], hist), axis=1), expected_8
+    )
