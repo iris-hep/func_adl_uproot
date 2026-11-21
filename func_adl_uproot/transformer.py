@@ -3,45 +3,44 @@ import sys
 
 from qastle import Contains, OrderBy, OrderByDescending, Select
 
+_then_by_nodes = {"ThenBy": OrderBy, "ThenByDescending": OrderByDescending}
 
-_then_by_nodes = {'ThenBy': OrderBy, 'ThenByDescending': OrderByDescending}
+allowed_modules = ["np"]
 
-allowed_modules = ['np']
+input_filenames_argument_name = "input_filenames"
+tree_name_argument_name = "tree_name"
+branch_filter_name = "_remove_not_interpretable"
 
-input_filenames_argument_name = 'input_filenames'
-tree_name_argument_name = 'tree_name'
-branch_filter_name = '_remove_not_interpretable'
-
-unary_op_dict = {ast.UAdd: '+', ast.USub: '-', ast.Invert: '~'}
+unary_op_dict = {ast.UAdd: "+", ast.USub: "-", ast.Invert: "~"}
 
 bin_op_dict = {
-    ast.Add: '+',
-    ast.Sub: '-',
-    ast.Mult: '*',
-    ast.Div: '/',
-    ast.FloorDiv: '//',
-    ast.Mod: '%',
-    ast.Pow: '**',
-    ast.LShift: '<<',
-    ast.RShift: '>>',
-    ast.BitOr: '|',
-    ast.BitXor: '^',
-    ast.BitAnd: '&',
+    ast.Add: "+",
+    ast.Sub: "-",
+    ast.Mult: "*",
+    ast.Div: "/",
+    ast.FloorDiv: "//",
+    ast.Mod: "%",
+    ast.Pow: "**",
+    ast.LShift: "<<",
+    ast.RShift: ">>",
+    ast.BitOr: "|",
+    ast.BitXor: "^",
+    ast.BitAnd: "&",
 }
 
-bool_op_dict = {ast.And: 'np.logical_and', ast.Or: 'np.logical_or'}
+bool_op_dict = {ast.And: "np.logical_and", ast.Or: "np.logical_or"}
 
 compare_op_dict = {
-    ast.Eq: '==',
-    ast.NotEq: '!=',
-    ast.Lt: '<',
-    ast.LtE: '<=',
-    ast.Gt: '>',
-    ast.GtE: '>=',
-    ast.Is: 'is',
-    ast.IsNot: 'is not',
-    ast.In: 'in',
-    ast.NotIn: 'not in',
+    ast.Eq: "==",
+    ast.NotEq: "!=",
+    ast.Lt: "<",
+    ast.LtE: "<=",
+    ast.Gt: ">",
+    ast.GtE: ">=",
+    ast.Is: "is",
+    ast.IsNot: "is not",
+    ast.In: "in",
+    ast.NotIn: "not in",
 }
 
 
@@ -56,27 +55,27 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         self._projection_stack = []
 
     def visit(self, node):
-        if hasattr(node, 'rep'):
+        if hasattr(node, "rep"):
             return node
         else:
             return super(PythonSourceGeneratorTransformer, self).visit(node)
 
     def generic_visit(self, node):
-        if hasattr(node, 'rep'):
+        if hasattr(node, "rep"):
             return node
         else:
             return super(PythonSourceGeneratorTransformer, self).generic_visit(node)
 
     def get_rep(self, node):
         if node is None:
-            return ''
-        if not hasattr(node, 'rep'):
+            return ""
+        if not hasattr(node, "rep"):
             node = self.visit(node)
         return node.rep
 
     def visit_Module(self, node):
         if len(node.body) < 1:
-            node.rep = ''
+            node.rep = ""
             node._depth = None
         else:
             node.rep = self.get_rep(node.body[0])
@@ -96,7 +95,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def visit_Num(self, node):
         node.rep = repr(node.n)
         if node.n < 0:
-            node.rep = '(' + node.rep + ')'
+            node.rep = "(" + node.rep + ")"
         node._depth = None
         return node
 
@@ -106,7 +105,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def visit_List(self, node):
-        node.rep = '[' + ', '.join(self.get_rep(element) for element in node.elts) + ']'
+        node.rep = "[" + ", ".join(self.get_rep(element) for element in node.elts) + "]"
         if len(node.elts) == 0:
             node._depth = None
         else:
@@ -114,21 +113,21 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def visit_Tuple(self, node):
-        node.rep = '(' + ', '.join(self.get_rep(element) for element in node.elts)
+        node.rep = "(" + ", ".join(self.get_rep(element) for element in node.elts)
         if len(node.elts) == 1:
-            node.rep += ','
-        node.rep += ')'
+            node.rep += ","
+        node.rep += ")"
         node._depth = nonemin([elt._depth for elt in node.elts])
         return node
 
     def visit_Dict(self, node):
         node.rep = (
-            '{'
-            + ', '.join(
-                self.get_rep(key) + ': ' + self.get_rep(value)
+            "{"
+            + ", ".join(
+                self.get_rep(key) + ": " + self.get_rep(value)
                 for key, value in zip(node.keys, node.values)
             )
-            + '}'
+            + "}"
         )
         node._depth = nonemin([value._depth for value in node.values])
         return node
@@ -137,10 +136,10 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if id in self._id_depths or id in allowed_modules or id in __builtins__:
             return id
         else:
-            raise NameError('Unknown id: ' + id)
+            raise NameError("Unknown id: " + id)
 
     def visit_Name(self, node):
-        if hasattr(node, 'ctx') and isinstance(node.ctx, ast.Param):
+        if hasattr(node, "ctx") and isinstance(node.ctx, ast.Param):
             node.rep = node.id
         else:
             node.rep = self.resolve_id(node.id)
@@ -158,37 +157,37 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
 
     def visit_UnaryOp(self, node):
         if type(node.op) is ast.Not:
-            node.rep = 'np.logical_not(' + self.get_rep(node.operand) + ')'
+            node.rep = "np.logical_not(" + self.get_rep(node.operand) + ")"
             node._depth = node.operand._depth
             return node
         if type(node.op) not in unary_op_dict:
-            raise SyntaxError('Unimplemented unary operation: ' + node.op)
+            raise SyntaxError("Unimplemented unary operation: " + node.op)
         operator_rep = unary_op_dict[type(node.op)]
         operand_rep = self.get_rep(node.operand)
-        node.rep = '(' + operator_rep + operand_rep + ')'
+        node.rep = "(" + operator_rep + operand_rep + ")"
         node._depth = node.operand._depth
         return node
 
     def visit_BinOp(self, node):
         left_rep = self.get_rep(node.left)
         if type(node.op) not in bin_op_dict:
-            raise SyntaxError('Unimplemented binary operation: ' + node.op)
+            raise SyntaxError("Unimplemented binary operation: " + node.op)
         operator_rep = bin_op_dict[type(node.op)]
         right_rep = self.get_rep(node.right)
-        node.rep = '(' + left_rep + ' ' + operator_rep + ' ' + right_rep + ')'
+        node.rep = "(" + left_rep + " " + operator_rep + " " + right_rep + ")"
         node._depth = nonemin([node.left._depth, node.right._depth])
         return node
 
     def visit_BoolOp(self, node):
         if type(node.op) not in bool_op_dict:
-            raise SyntaxError('Unimplemented boolean operation: ' + node.op)
+            raise SyntaxError("Unimplemented boolean operation: " + node.op)
         bool_op_func = bool_op_dict[type(node.op)]
         node.rep = (
-            'functools.reduce('
+            "functools.reduce("
             + bool_op_func
-            + ', ['
-            + ', '.join([self.get_rep(value) for value in node.values])
-            + '])'
+            + ", ["
+            + ", ".join([self.get_rep(value) for value in node.values])
+            + "])"
         )
         node._depth = nonemin([value._depth for value in node.values])
         return node
@@ -196,7 +195,9 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def visit_Compare(self, node):
         comparison_reps = []
         full_comparators = [node.left] + node.comparators
-        for left, operator, right in zip(full_comparators[:-1], node.ops, full_comparators[1:]):
+        for left, operator, right in zip(
+            full_comparators[:-1], node.ops, full_comparators[1:]
+        ):
             if isinstance(operator, ast.In):
                 contains_node = Contains(source=right, value=left)
                 comparison_reps.append(self.get_rep(contains_node))
@@ -206,27 +207,29 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 comparison_reps.append(self.get_rep(not_node))
             else:
                 if type(operator) not in compare_op_dict:
-                    raise SyntaxError('Unimplemented comparison operation: ' + operator)
+                    raise SyntaxError("Unimplemented comparison operation: " + operator)
                 left_rep = self.get_rep(left)
                 operator_rep = compare_op_dict[type(operator)]
                 right_rep = self.get_rep(right)
-                comparison_reps.append('(' + left_rep + ' ' + operator_rep + ' ' + right_rep + ')')
-        node.rep = ' & '.join(comparison_reps)
+                comparison_reps.append(
+                    "(" + left_rep + " " + operator_rep + " " + right_rep + ")"
+                )
+        node.rep = " & ".join(comparison_reps)
         if len(node.ops) > 1:
-            node.rep = '(' + node.rep + ')'
+            node.rep = "(" + node.rep + ")"
         node._depth = nonemin([comparator._depth for comparator in full_comparators])
         return node
 
     def _broadcast_value(self, array_node, value_node):
         if isinstance(value_node, ast.Constant):
             value_node.rep = (
-                'dak.full_like(dak.unzip('
+                "dak.full_like(dak.unzip("
                 + self.get_rep(array_node)
-                + ')[0], '
+                + ")[0], "
                 + self.get_rep(value_node)
-                + ', dtype=type('
+                + ", dtype=type("
                 + self.get_rep(value_node)
-                + '))'
+                + "))"
             )
             value_node._depth = array_node
         return value_node
@@ -235,13 +238,13 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         node.body = self._broadcast_value(node.test, node.body)
         node.orelse = self._broadcast_value(node.test, node.orelse)
         node.rep = (
-            'dak.where('
+            "dak.where("
             + self.get_rep(node.test)
-            + ', '
+            + ", "
             + self.get_rep(node.body)
-            + ', '
+            + ", "
             + self.get_rep(node.orelse)
-            + ')'
+            + ")"
         )
         node._depth = node.test._depth
         return node
@@ -254,10 +257,10 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def visit_Slice(self, node):
         lower_rep = self.get_rep(node.lower)
         upper_rep = self.get_rep(node.upper)
-        node.rep = lower_rep + ':' + upper_rep
+        node.rep = lower_rep + ":" + upper_rep
         step_rep = self.get_rep(node.step)
-        if step_rep != '':
-            node.rep += ':' + step_rep
+        if step_rep != "":
+            node.rep += ":" + step_rep
         node._depth = None
         return node
 
@@ -271,36 +274,36 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         slice_rep = self.get_rep(node.slice)
         # Internally generated filter masks and sort indices apply directly to the
         # array; do not translate them as user-written element/field lookups.
-        if hasattr(node, 'short_circuit') and node.short_circuit is True:
-            node.rep = value_rep + '[' + slice_rep + ']'
+        if hasattr(node, "short_circuit") and node.short_circuit is True:
+            node.rep = value_rep + "[" + slice_rep + "]"
         else:
             if isinstance(node.slice, ast.Slice):
                 node.rep = (
-                    '('
+                    "("
                     + value_rep
-                    + '['
+                    + "["
                     + value_rep
-                    + '.fields['
+                    + ".fields["
                     + slice_rep
-                    + ']]'
-                    + ' if isinstance('
+                    + "]]"
+                    + " if isinstance("
                     + value_rep
-                    + ', dak.Array)'
-                    + ' else '
+                    + ", dak.Array)"
+                    + " else "
                     + value_rep
-                    + '['
+                    + "["
                     + slice_rep
-                    + '])'
+                    + "])"
                 )
             elif isinstance(node.slice, ast.Tuple) or (
                 (sys.version_info[0] == 3 and sys.version_info[1] < 9)
                 and isinstance(node.slice, ast.ExtSlice)
             ):
-                raise NotImplementedError('Multidimensional slices are not supported')
+                raise NotImplementedError("Multidimensional slices are not supported")
             else:
-                if (sys.version_info[0] == 3 and sys.version_info[1] < 9) and isinstance(
-                    node.slice, ast.Index
-                ):
+                if (
+                    sys.version_info[0] == 3 and sys.version_info[1] < 9
+                ) and isinstance(node.slice, ast.Index):
                     slice_value = node.slice.value
                 else:
                     slice_value = node.slice
@@ -308,68 +311,68 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                     slice_eval = ast.literal_eval(slice_value)
                     if isinstance(slice_eval, int):
                         node.rep = (
-                            '('
+                            "("
                             + value_rep
-                            + '['
+                            + "["
                             + value_rep
-                            + '.fields['
+                            + ".fields["
                             + slice_rep
-                            + ']]'
-                            + ' if isinstance('
+                            + "]]"
+                            + " if isinstance("
                             + value_rep
-                            + ', dak.Array)'
-                            + ' else '
+                            + ", dak.Array)"
+                            + " else "
                             + value_rep
-                            + '['
+                            + "["
                             + slice_rep
-                            + '])'
+                            + "])"
                         )
                     else:
-                        node.rep = value_rep + '[' + slice_rep + ']'
+                        node.rep = value_rep + "[" + slice_rep + "]"
                 except ValueError:
                     node.rep = (
-                        '('
+                        "("
                         + value_rep
-                        + '['
+                        + "["
                         + value_rep
-                        + '.fields['
+                        + ".fields["
                         + slice_rep
-                        + ']]'
-                        + ' if isinstance('
+                        + "]]"
+                        + " if isinstance("
                         + value_rep
-                        + ', dak.Array)'
-                        + ' and (isinstance('
+                        + ", dak.Array)"
+                        + " and (isinstance("
                         + slice_rep
-                        + ', int)'
-                        + ' or isinstance('
+                        + ", int)"
+                        + " or isinstance("
                         + slice_rep
-                        + ', slice))'
-                        + ' else '
+                        + ", slice))"
+                        + " else "
                         + value_rep
-                        + '['
+                        + "["
                         + slice_rep
-                        + '])'
+                        + "])"
                     )
         node._depth = node.value._depth
         return node
 
     def visit_Attribute(self, node):
-        node.rep = self.get_rep(node.value) + '.' + node.attr
+        node.rep = self.get_rep(node.value) + "." + node.attr
         node._depth = node.value._depth
         return node
 
     def visit_Lambda(self, node):
         arg_strs = [self.get_rep(arg_node) for arg_node in node.args.args]
-        args_rep = ', '.join(arg_strs)
+        args_rep = ", ".join(arg_strs)
         for arg_str, arg_node in zip(arg_strs, node.args.args):
             if arg_str not in self._id_depths:
                 self._id_depths[arg_str] = []
             self._id_depths[arg_str].append(arg_node._depth)
         body_rep = self.get_rep(node.body)
-        node.rep = '(lambda'
-        if args_rep != '':
-            node.rep += ' '
-        node.rep += args_rep + ': ' + body_rep + ')'
+        node.rep = "(lambda"
+        if args_rep != "":
+            node.rep += " "
+        node.rep += args_rep + ": " + body_rep + ")"
         for arg_str in arg_strs:
             del self._id_depths[arg_str][-1]
             if len(self._id_depths[arg_str]) == 0:
@@ -379,25 +382,25 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
 
     def visit_arg(self, node):
         node.rep = node.arg
-        if not hasattr(node, '_depth'):
+        if not hasattr(node, "_depth"):
             node._depth = None
         return node
 
     def visit_Call(self, node):
         func = node.func
-        if isinstance(func, ast.Attribute) and func.attr in ('Skip', 'Take'):
+        if isinstance(func, ast.Attribute) and func.attr in ("Skip", "Take"):
             return self._visit_sequence_slice(node, func.attr, [func.value] + node.args)
-        if isinstance(func, ast.Name) and func.id in ('Skip', 'Take'):
+        if isinstance(func, ast.Name) and func.id in ("Skip", "Take"):
             return self._visit_sequence_slice(node, func.id, node.args)
-        if isinstance(node.func, ast.Name) and node.func.id == 'EventDataset':
+        if isinstance(node.func, ast.Name) and node.func.id == "EventDataset":
             if len(node.args) > 2:
                 raise TypeError(
-                    'EventDataset() should have no more than two arguments, found '
+                    "EventDataset() should have no more than two arguments, found "
                     + str(len(node.args))
                 )
             node._depth = 0
             if len(node.args) >= 1:
-                if hasattr(node.args[0], 'elts'):
+                if hasattr(node.args[0], "elts"):
                     urls = node.args[0].elts
                 else:
                     urls = [node.args[0]]
@@ -405,82 +408,93 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 urls = [url for url in urls if url is not None]
                 source_rep = (
                     input_filenames_argument_name
-                    + ' '
-                    + 'if '
+                    + " "
+                    + "if "
                     + input_filenames_argument_name
-                    + ' is not None '
-                    + 'else '
+                    + " is not None "
+                    + "else "
                     + repr(urls)
                 )
             else:
                 source_rep = input_filenames_argument_name
             source_rep = (
-                '(lambda source: [source] if isinstance(source, str) else source)('
+                "(lambda source: [source] if isinstance(source, str) else source)("
                 + source_rep
-                + ')'
+                + ")"
             )
             if len(node.args) >= 2:
                 local_tree_name_rep = self.get_rep(node.args[1])
             else:
                 local_tree_name_rep = (
-                    '(lambda key_array: '
+                    "(lambda key_array: "
                     + "key_array[key_array[:, 1] == 'TTree'][:, 0])("
-                    + 'np.atleast_2d((lambda classnames:'
-                    + ' np.hstack([list(classnames.keys()),'
-                    + ' list(classnames.values())]))'
-                    + '(uproot.open({'
+                    + "np.atleast_2d((lambda classnames:"
+                    + " np.hstack([list(classnames.keys()),"
+                    + " list(classnames.values())]))"
+                    + "(uproot.open({"
                     + source_rep
-                    + '[0]: None}).classnames())'
-                    + '))[0]'
+                    + "[0]: None}).classnames())"
+                    + "))[0]"
                 )
             tree_name_rep = (
                 tree_name_argument_name
-                + ' '
-                + 'if '
+                + " "
+                + "if "
                 + tree_name_argument_name
-                + ' is not None '
-                + 'else '
+                + " is not None "
+                + "else "
                 + local_tree_name_rep
             )
             node.rep = (
-                '(lambda input_files, tree_name_to_use: '
+                "(lambda input_files, tree_name_to_use: "
                 + "(logging.getLogger(__name__).info('Using treename='"
-                + ' + repr(tree_name_to_use)),'
-                + ' uproot.dask({input_file: tree_name_to_use'
-                + ' for input_file in named_tree_inputs(input_files, tree_name_to_use, '
-                + tree_name_argument_name + ' is not None or '
-                + repr(len(node.args) >= 2 and ast.literal_eval(node.args[1]) is not None)
-                + ')}, filter_branch='
+                + " + repr(tree_name_to_use)),"
+                + " uproot.dask({input_file: tree_name_to_use"
+                + " for input_file in named_tree_inputs(input_files, tree_name_to_use, "
+                + tree_name_argument_name
+                + " is not None or "
+                + repr(
+                    len(node.args) >= 2 and ast.literal_eval(node.args[1]) is not None
+                )
+                + ")}, filter_branch="
                 + branch_filter_name
-                + '))[1])'
-                + '('
+                + "))[1])"
+                + "("
                 + source_rep
-                + ', '
+                + ", "
                 + tree_name_rep
-                + ')'
+                + ")"
             )
         else:
             if self._then_by_name(node) is not None:
                 return self._visit_then_by(node)
-            if isinstance(node.func, ast.Attribute) and node.func.attr == 'ToFourMomentum':
+            if (
+                isinstance(node.func, ast.Attribute)
+                and node.func.attr == "ToFourMomentum"
+            ):
                 value_rep = self.get_rep(node.func.value)
                 node.rep = (
-                    'dak.with_name(dak.zip('
+                    "dak.with_name(dak.zip("
                     + value_rep
-                    + ') if isinstance('
+                    + ") if isinstance("
                     + value_rep
-                    + ', dict) else '
+                    + ", dict) else "
                     + value_rep
                     + ", 'Momentum4D')"
                 )
                 node._depth = node.func.value._depth
-            elif isinstance(node.func, ast.Attribute) and node.func.attr == 'ToFourMomenta':
-                node.rep = 'dak.with_name(' + self.get_rep(node.func.value) + ", 'Momentum4D')"
+            elif (
+                isinstance(node.func, ast.Attribute)
+                and node.func.attr == "ToFourMomenta"
+            ):
+                node.rep = (
+                    "dak.with_name(" + self.get_rep(node.func.value) + ", 'Momentum4D')"
+                )
                 node._depth = node.func.value._depth
             else:
                 func_rep = self.get_rep(node.func)
-                args_rep = ', '.join(self.get_rep(arg) for arg in node.args)
-                node.rep = func_rep + '(' + args_rep + ')'
+                args_rep = ", ".join(self.get_rep(arg) for arg in node.args)
+                node.rep = func_rep + "(" + args_rep + ")"
                 if len(node.args) == 0:
                     node._depth = None
                 else:
@@ -491,7 +505,7 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if (
             not args
             or len(args) + len(node.keywords) != 2
-            or any(keyword.arg != 'n' for keyword in node.keywords)
+            or any(keyword.arg != "n" for keyword in node.keywords)
             or any(isinstance(arg, ast.Starred) for arg in args)
         ):
             raise ValueError(
@@ -504,37 +518,42 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         except (ValueError, TypeError):
             count = None
         if type(count) is not int:
-            raise ValueError(f'{operation} count must be a literal integer: {ast.unparse(node)}')
+            raise ValueError(
+                f"{operation} count must be a literal integer: {ast.unparse(node)}"
+            )
 
         self.visit(source)
         node._depth = source._depth
         count = max(count, 0)
         source_rep = self.get_rep(source)
         if node._depth == 0:
-            start, stop = (count, None) if operation == 'Skip' else (None, count)
-            node.rep = f'slice_events({source_rep}, {start!r}, {stop!r})'
+            start, stop = (count, None) if operation == "Skip" else (None, count)
+            node.rep = f"slice_events({source_rep}, {start!r}, {stop!r})"
         else:
-            axis_prefix = ':, ' * (node._depth or 0)
-            index = f'{count}:' if operation == 'Skip' else f':{count}'
-            node.rep = f'{source_rep}[{axis_prefix}{index}]'
+            axis_prefix = ":, " * (node._depth or 0)
+            index = f"{count}:" if operation == "Skip" else f":{count}"
+            node.rep = f"{source_rep}[{axis_prefix}{index}]"
         return node
 
     def visit_Select(self, node):
         if type(node.selector) is not ast.Lambda:
             raise TypeError(
-                'Argument to Select() must be a lambda function, found ' + node.selector
+                "Argument to Select() must be a lambda function, found " + node.selector
             )
         if len(node.selector.args.args) != 1:
             raise TypeError(
-                'Lambda function in Select() must have exactly one argument, found '
+                "Lambda function in Select() must have exactly one argument, found "
                 + len(node.selector.args.args)
             )
         self.visit(node.source)
         self._projection_stack.append(node.selector.args.args[0].arg)
         node.selector.args.args[0]._depth = node.source._depth + 1
-        node.selector.body = self._broadcast_value(node.selector.args.args[0], node.selector.body)
+        node.selector.body = self._broadcast_value(
+            node.selector.args.args[0], node.selector.body
+        )
         if (
-            isinstance(node.source, ast.Name) and node.source.id in self._projection_stack[:-2]
+            isinstance(node.source, ast.Name)
+            and node.source.id in self._projection_stack[:-2]
         ) or (
             isinstance(node.source, ast.Attribute)
             and isinstance(node.source.value, ast.Name)
@@ -549,13 +568,13 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             )
             call_rep = (
                 self.get_rep(lambda_node)
-                + '(*dak.unzip(dak.cartesian(('
+                + "(*dak.unzip(dak.cartesian(("
                 + rep1
-                + ', '
+                + ", "
                 + self.get_rep(node.source)
-                + '), axis='
+                + "), axis="
                 + repr(node.source._depth)
-                + ', nested=True)))'
+                + ", nested=True)))"
             )
             depth_limit = node.source._depth + 2
             node._depth = node.selector.args.args[0]._depth
@@ -565,16 +584,16 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             depth_limit = node.source._depth + 1
             node._depth = node.source._depth
         select_rep = (
-            '(lambda selection:'
-            + ' dak.zip({key: (dak.zip(value, depth_limit=(None if len(value) == 1 else '
+            "(lambda selection:"
+            + " dak.zip({key: (dak.zip(value, depth_limit=(None if len(value) == 1 else "
             + repr(depth_limit)
-            + ')) if isinstance(value, dict) else value) for key, value in selection.items()'
-            + '} if isinstance(selection, dict) else selection,'
-            + ' depth_limit=(None if len(selection) == 1 else '
+            + ")) if isinstance(value, dict) else value) for key, value in selection.items()"
+            + "} if isinstance(selection, dict) else selection,"
+            + " depth_limit=(None if len(selection) == 1 else "
             + repr(depth_limit)
-            + ')) if not isinstance(selection, dak.Array) else selection)('
+            + ")) if not isinstance(selection, dak.Array) else selection)("
             + call_rep
-            + ')'
+            + ")"
         )
         self._projection_stack.pop()
         node.rep = select_rep
@@ -583,25 +602,26 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def visit_SelectMany(self, node):
         if type(node.selector) is not ast.Lambda:
             raise TypeError(
-                'Argument to SelectMany() must be a lambda function, found ' + node.selector
+                "Argument to SelectMany() must be a lambda function, found "
+                + node.selector
             )
         if len(node.selector.args.args) != 1:
             raise TypeError(
-                'Lambda function in SelectMany() must have exactly one argument, '
-                'found ' + len(node.selector.args.args)
+                "Lambda function in SelectMany() must have exactly one argument, "
+                "found " + len(node.selector.args.args)
             )
         self.visit_Select(node)
-        node.rep = 'dak.flatten(' + node.rep + ', axis=' + repr(node._depth + 1) + ')'
+        node.rep = "dak.flatten(" + node.rep + ", axis=" + repr(node._depth + 1) + ")"
         return node
 
     def visit_Where(self, node):
         if type(node.predicate) is not ast.Lambda:
             raise TypeError(
-                'Argument to Where() must be a lambda function, found ' + node.predicate
+                "Argument to Where() must be a lambda function, found " + node.predicate
             )
         if len(node.predicate.args.args) != 1:
             raise TypeError(
-                'Lambda function in Where() must have exactly one argument, found '
+                "Lambda function in Where() must have exactly one argument, found "
                 + len(node.predicate.args.args)
             )
         self.visit(node.source)
@@ -612,11 +632,13 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             slice_node = ast.Index(node.predicate.body)
         else:
             slice_node = node.predicate.body
-        node.predicate.body = ast.Subscript(value=ast.Name(id=subscriptable), slice=slice_node)
+        node.predicate.body = ast.Subscript(
+            value=ast.Name(id=subscriptable), slice=slice_node
+        )
         node.predicate.body.short_circuit = True
         if node.source._depth == 0:
-            node.rep = 'filter_events(' + self.get_rep(node.source) + ', '
-            node.rep += self.get_rep(node.predicate) + ')'
+            node.rep = "filter_events(" + self.get_rep(node.source) + ", "
+            node.rep += self.get_rep(node.predicate) + ")"
         else:
             call_node = ast.Call(func=node.predicate, args=[node.source])
             node.rep = self.get_rep(call_node)
@@ -628,14 +650,18 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         select_node = Select(source=node.source, selector=node.predicate)
         self.visit(select_node)
         node._depth = select_node._depth
-        node.rep = 'dak.all(' + self.get_rep(select_node) + ', axis=' + repr(node._depth) + ')'
+        node.rep = (
+            "dak.all(" + self.get_rep(select_node) + ", axis=" + repr(node._depth) + ")"
+        )
         return node
 
     def visit_Any(self, node):
         select_node = Select(source=node.source, selector=node.predicate)
         self.visit(select_node)
         node._depth = select_node._depth
-        node.rep = 'dak.any(' + self.get_rep(select_node) + ', axis=' + repr(node._depth) + ')'
+        node.rep = (
+            "dak.any(" + self.get_rep(select_node) + ", axis=" + repr(node._depth) + ")"
+        )
         return node
 
     def visit_Concat(self, node):
@@ -643,7 +669,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         self.visit(tuple_node)
         node._depth = tuple_node._depth
         node.rep = (
-            'dak.concatenate(' + self.get_rep(tuple_node) + ', axis=' + repr(node._depth) + ')'
+            "dak.concatenate("
+            + self.get_rep(tuple_node)
+            + ", axis="
+            + repr(node._depth)
+            + ")"
         )
         return node
 
@@ -651,54 +681,66 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         self.visit(node.source)
         node._depth = node.source._depth
         node.rep = (
-            'dak.zip(' + self.get_rep(node.source) + ', depth_limit=' + repr(node._depth + 1) + ')'
+            "dak.zip("
+            + self.get_rep(node.source)
+            + ", depth_limit="
+            + repr(node._depth + 1)
+            + ")"
         )
         return node
 
     def visit_Count(self, node):
         self.visit(node.source)
         node._depth = node.source._depth
-        node.rep = 'dak.num(' + self.get_rep(node.source) + ', axis=' + repr(node._depth) + ')'
+        node.rep = (
+            "dak.num(" + self.get_rep(node.source) + ", axis=" + repr(node._depth) + ")"
+        )
         return node
 
     def visit_Min(self, node):
         self.visit(node.source)
         node._depth = node.source._depth
-        node.rep = 'dak.min(' + self.get_rep(node.source) + ', axis=' + repr(node._depth) + ')'
+        node.rep = (
+            "dak.min(" + self.get_rep(node.source) + ", axis=" + repr(node._depth) + ")"
+        )
         return node
 
     def visit_Max(self, node):
         self.visit(node.source)
         node._depth = node.source._depth
-        node.rep = 'dak.max(' + self.get_rep(node.source) + ', axis=' + repr(node._depth) + ')'
+        node.rep = (
+            "dak.max(" + self.get_rep(node.source) + ", axis=" + repr(node._depth) + ")"
+        )
         return node
 
     def visit_Sum(self, node):
         self.visit(node.source)
         node._depth = node.source._depth
-        node.rep = 'dak.sum(' + self.get_rep(node.source) + ', axis=' + repr(node._depth) + ')'
+        node.rep = (
+            "dak.sum(" + self.get_rep(node.source) + ", axis=" + repr(node._depth) + ")"
+        )
         return node
 
     def visit_Choose(self, node):
         self.visit(node.source)
         node._depth = node.source._depth
         combinations_rep = (
-            'dak.combinations('
+            "dak.combinations("
             + self.get_rep(node.source)
-            + ', '
+            + ", "
             + self.get_rep(node.n)
-            + ', axis='
+            + ", axis="
             + repr(node._depth)
-            + ')'
+            + ")"
         )
         node.rep = (
-            'dak.concatenate([dak.singletons(i, axis='
+            "dak.concatenate([dak.singletons(i, axis="
             + str(node._depth)
-            + ') for i in dak.unzip('
+            + ") for i in dak.unzip("
             + combinations_rep
-            + ')], axis='
+            + ")], axis="
             + str(node._depth + 1)
-            + ')'
+            + ")"
         )
         return node
 
@@ -707,7 +749,10 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         if isinstance(node, ast.Call):
             if isinstance(node.func, ast.Name) and node.func.id in _then_by_nodes:
                 return node.func.id
-            if isinstance(node.func, ast.Attribute) and node.func.attr in _then_by_nodes:
+            if (
+                isinstance(node.func, ast.Attribute)
+                and node.func.attr in _then_by_nodes
+            ):
                 return node.func.attr
         return None
 
@@ -721,11 +766,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             if (
                 not args
                 or len(args) + len(source.keywords) != 2
-                or any(keyword.arg != 'key_selector' for keyword in source.keywords)
+                or any(keyword.arg != "key_selector" for keyword in source.keywords)
                 or any(isinstance(arg, ast.Starred) for arg in args)
             ):
                 raise ValueError(
-                    f'{operation} requires a source and one lambda key: {ast.unparse(source)}'
+                    f"{operation} requires a source and one lambda key: {ast.unparse(source)}"
                 )
             key = args[1] if len(args) == 2 else source.keywords[0].value
             clauses.append((_then_by_nodes[operation], key))
@@ -733,8 +778,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
 
         if not isinstance(source, (OrderBy, OrderByDescending)):
             raise ValueError(
-                f'{self._then_by_name(node)} must immediately follow an ordering operation: '
-                f'{ast.unparse(node)}'
+                f"{self._then_by_name(node)} must immediately follow an ordering operation: "
+                f"{ast.unparse(node)}"
             )
 
         # Stable sorts from the least significant key to the primary key preserve ties.
@@ -749,38 +794,40 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def visit_OrderBy(self, node, ascending=True):
         if type(node.key_selector) is not ast.Lambda:
             raise TypeError(
-                'Argument to OrderBy() must be a lambda function, found '
+                "Argument to OrderBy() must be a lambda function, found "
                 + str(type(node.key_selector))
             )
         if len(node.key_selector.args.args) != 1:
             raise TypeError(
-                'Lambda function in OrderBy() must have exactly one argument, found '
+                "Lambda function in OrderBy() must have exactly one argument, found "
                 + str(len(node.key_selector.args.args))
             )
         self.visit(node.source)
         if node.source._depth == 0:
-            operator = 'OrderBy' if ascending else 'OrderByDescending'
+            operator = "OrderBy" if ascending else "OrderByDescending"
             raise ValueError(
-                f'{operator} cannot sort events. Sort a collection inside each event.'
+                f"{operator} cannot sort events. Sort a collection inside each event."
             )
         node.key_selector.args.args[0]._depth = node.source._depth + 1
         subscriptable = node.key_selector.args.args[0].arg
         self.visit(node.key_selector)
-        delattr(node.key_selector, 'rep')
+        delattr(node.key_selector, "rep")
         node.key_selector.body.rep = (
-            'dak.argsort('
+            "dak.argsort("
             + self.get_rep(node.key_selector.body)
-            + ', axis='
+            + ", axis="
             + repr(node.source._depth)
-            + ', ascending='
+            + ", ascending="
             + str(ascending)
-            + ', stable=True)'
+            + ", stable=True)"
         )
         if sys.version_info[0] == 3 and sys.version_info[1] < 9:
             slice_node = ast.Index(node.key_selector.body)
         else:
             slice_node = node.key_selector.body
-        node.key_selector.body = ast.Subscript(value=ast.Name(id=subscriptable), slice=slice_node)
+        node.key_selector.body = ast.Subscript(
+            value=ast.Name(id=subscriptable), slice=slice_node
+        )
         node.key_selector.body.short_circuit = True
         call_node = ast.Call(func=node.key_selector, args=[node.source])
         node.rep = self.get_rep(call_node)
@@ -790,13 +837,13 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def visit_OrderByDescending(self, node):
         if type(node.key_selector) is not ast.Lambda:
             raise TypeError(
-                'Argument to OrderByDescending() must be a lambda function, found '
+                "Argument to OrderByDescending() must be a lambda function, found "
                 + str(type(node.key_selector))
             )
         if len(node.key_selector.args.args) != 1:
             raise TypeError(
-                'Lambda function in OrderByDescending() must have exactly one'
-                + 'argument, found '
+                "Lambda function in OrderByDescending() must have exactly one"
+                + "argument, found "
                 + str(len(node.key_selector.args.args))
             )
         node = self.visit_OrderBy(node, ascending=False)
@@ -805,14 +852,18 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def visit_First(self, node):
         self.visit(node.source)
         node._depth = node.source._depth
-        node.rep = self.get_rep(node.source) + '[' + ':, ' * node._depth + '0]'
+        node.rep = self.get_rep(node.source) + "[" + ":, " * node._depth + "0]"
         return node
 
     def visit_ElementAt(self, node):
         self.visit(node.source)
         node._depth = node.source._depth
         node.rep = (
-            self.get_rep(node.source) + '[' + ':, ' * node._depth + self.get_rep(node.index) + ']'
+            self.get_rep(node.source)
+            + "["
+            + ":, " * node._depth
+            + self.get_rep(node.index)
+            + "]"
         )
         return node
 
@@ -838,33 +889,33 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         else:
             tuple_rep = self.get_rep(ast.Tuple(elts=[node.value, node.source]))
             condition_rep = (
-                'if isinstance('
+                "if isinstance("
                 + self.get_rep(node.value)
-                + ', dak.Array) and isinstance('
+                + ", dak.Array) and isinstance("
                 + self.get_rep(node.source)
-                + ', dak.Array) and getattr('
+                + ", dak.Array) and getattr("
                 + self.get_rep(node.value)
                 + ", 'ndim') >= getattr("
                 + self.get_rep(node.source)
                 + ", 'ndim')"
             )
             comparators_rep = (
-                '*dak.unzip(dak.cartesian('
+                "*dak.unzip(dak.cartesian("
                 + tuple_rep
-                + ',  axis='
+                + ",  axis="
                 + repr(node._depth)
-                + ', nested=True)) '
+                + ", nested=True)) "
                 + condition_rep
-                + ' else '
+                + " else "
                 + tuple_rep
             )
-            compare_rep = '(lambda x, y: x == y)(' + comparators_rep + ')'
-            any_axis_rep = repr(node._depth) + ' + (1 ' + condition_rep + ' else 0)'
-            node.rep = 'dak.any(' + compare_rep + ', axis=' + any_axis_rep + ')'
+            compare_rep = "(lambda x, y: x == y)(" + comparators_rep + ")"
+            any_axis_rep = repr(node._depth) + " + (1 " + condition_rep + " else 0)"
+            node.rep = "dak.any(" + compare_rep + ", axis=" + any_axis_rep + ")"
         return node
 
     def visit_Last(self, node):
         self.visit(node.source)
         node._depth = node.source._depth
-        node.rep = self.get_rep(node.source) + '[' + ':, ' * node._depth + ' - 1]'
+        node.rep = self.get_rep(node.source) + "[" + ":, " * node._depth + " - 1]"
         return node

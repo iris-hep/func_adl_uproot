@@ -3,13 +3,14 @@ import copy
 import qastle
 
 from .transformer import PythonSourceGeneratorTransformer
-from .transformer import branch_filter_name, input_filenames_argument_name, tree_name_argument_name
+from .transformer import (
+    branch_filter_name,
+    input_filenames_argument_name,
+    tree_name_argument_name,
+)
 
 # Adapted from https://github.com/CoffeaTeam/coffea/blob/v2024.4.0/src/coffea/util.py#L217-L248
-remove_not_interpretable_source = (
-    '    def '
-    + branch_filter_name
-    + '''(branch):
+remove_not_interpretable_source = "    def " + branch_filter_name + """(branch):
         if isinstance(branch.interpretation, uproot.interpretation.identify.uproot.AsGrouped):
             for name, interpretation in branch.interpretation.subbranches.items():
                 if isinstance(
@@ -34,11 +35,10 @@ remove_not_interpretable_source = (
         else:
             return True
 
-'''
-)
+"""
 
 
-named_tree_source = '''    def named_tree_inputs(input_files, tree_name, explicit_tree):
+named_tree_source = """    def named_tree_inputs(input_files, tree_name, explicit_tree):
         # Pattern expansion belongs to Uproot; preflight only concrete paths.
         if not explicit_tree or any(glob.has_magic(str(path)) for path in input_files):
             return input_files
@@ -60,10 +60,10 @@ named_tree_source = '''    def named_tree_inputs(input_files, tree_name, explici
             )
         return matching
 
-'''
+"""
 
 
-event_filter_source = '''    def filter_events(rows, apply_filter):
+event_filter_source = """    def filter_events(rows, apply_filter):
         # Skip event predicates when the reader can prove there are no rows.
         if isinstance(rows, dak.Array) and rows.known_divisions and rows.divisions[-1] == 0:
             return rows
@@ -80,41 +80,41 @@ event_filter_source = '''    def filter_events(rows, apply_filter):
                 return rows.partitions[0].map_partitions(lambda partition: partition[:0])
         return rows[start:stop]
 
-'''
+"""
 
 
 def python_ast_to_python_source(python_ast):
     return PythonSourceGeneratorTransformer().get_rep(python_ast)
 
 
-def generate_python_source(ast, function_name='run_query'):
+def generate_python_source(ast, function_name="run_query"):
     if isinstance(ast, str):
         python_ast = qastle.text_ast_to_python_ast(ast)
     else:
         python_ast = copy.deepcopy(ast)
     python_ast = qastle.insert_linq_nodes(python_ast)
     source = (
-        'class NoMatchingTreeError(ValueError):\n'
+        "class NoMatchingTreeError(ValueError):\n"
         '    """No input contains the explicitly requested tree."""\n\n\n'
-        'def '
+        "def "
         + function_name
-        + '('
+        + "("
         + input_filenames_argument_name
-        + '=None, '
+        + "=None, "
         + tree_name_argument_name
-        + '=None):\n'
+        + "=None):\n"
     )
-    source += '    import functools, glob, logging, numpy as np\n'
-    source += '    import dask_awkward as dak, uproot, vector\n'
-    source += '    vector.register_awkward()\n\n'
+    source += "    import functools, glob, logging, numpy as np\n"
+    source += "    import dask_awkward as dak, uproot, vector\n"
+    source += "    vector.register_awkward()\n\n"
     source += remove_not_interpretable_source
     source += named_tree_source
     source += event_filter_source
-    source += '    return ' + python_ast_to_python_source(python_ast) + '.compute()\n'
+    source += "    return " + python_ast_to_python_source(python_ast) + ".compute()\n"
     return source
 
 
-def generate_function(ast, function_name='run_query'):
+def generate_function(ast, function_name="run_query"):
     source = generate_python_source(ast)
     namespace = {}
     exec(source, namespace)
