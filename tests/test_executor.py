@@ -1,6 +1,7 @@
 import ast
 
 import numpy as np
+import pytest
 
 import awkward as ak
 
@@ -295,12 +296,16 @@ def test_ast_executor_selectmany_vector_branch_zipped_dict():
     assert np.allclose(ast_executor(python_ast)['floats'].tolist(), [-7.7, 8.8, 9.9, 15.15])
 
 
-def test_ast_executor_where_vector_branch():
+@pytest.mark.parametrize('qastle_input', [False, True])
+@pytest.mark.filterwarnings('error:.*unexpected keyword argument:DeprecationWarning')
+def test_ast_executor_where_vector_branch(qastle_input):
     python_source = (
         "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
         + "lambda row: row.int_vector_branch.Where(lambda int_value: int_value > 0))"
     )
     python_ast = ast.parse(python_source)
+    if qastle_input:
+        python_ast = qastle.python_ast_to_text_ast(python_ast)
     assert ast_executor(python_ast).tolist() == [[], [2, 3], [13]]
 
 
@@ -652,12 +657,16 @@ def test_ast_executor_tofourmomenta_sum():
 #     assert ast_executor(python_ast).tolist() == [0, -1]
 
 
-def test_ast_executor_orderby_same_vector_branch():
+@pytest.mark.parametrize('qastle_input', [False, True])
+@pytest.mark.filterwarnings('error:.*unexpected keyword argument:DeprecationWarning')
+def test_ast_executor_orderby_same_vector_branch(qastle_input):
     python_source = (
         "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
         + 'lambda row: row.int_vector_branch.OrderBy(lambda int_value: int_value))'
     )
     python_ast = ast.parse(python_source)
+    if qastle_input:
+        python_ast = qastle.python_ast_to_text_ast(python_ast)
     assert ast_executor(python_ast).tolist() == [[], [-1, 2, 3], [13]]
 
 
@@ -709,12 +718,16 @@ def test_ast_executor_orderby_different_negative_vector_branch():
 #     assert ast_executor(python_ast).tolist() == [0, -1]
 
 
-def test_ast_executor_orderbydescending_vector_branch():
+@pytest.mark.parametrize('qastle_input', [False, True])
+@pytest.mark.filterwarnings('error:.*unexpected keyword argument:DeprecationWarning')
+def test_ast_executor_orderbydescending_vector_branch(qastle_input):
     python_source = (
         "Select(EventDataset('tests/vectors_tree_file.root', 'tree'),"
         + 'lambda row: row.int_vector_branch.OrderByDescending(lambda int_value: int_value))'
     )
     python_ast = ast.parse(python_source)
+    if qastle_input:
+        python_ast = qastle.python_ast_to_text_ast(python_ast)
     assert ast_executor(python_ast).tolist() == [[], [3, 2, -1], [13]]
 
 

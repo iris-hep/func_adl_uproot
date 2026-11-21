@@ -267,6 +267,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
     def visit_Subscript(self, node):
         value_rep = self.get_rep(node.value)
         slice_rep = self.get_rep(node.slice)
+        # Internally generated filter masks and sort indices apply directly to the
+        # array; do not translate them as user-written element/field lookups.
         if hasattr(node, 'short_circuit') and node.short_circuit is True:
             node.rep = value_rep + '[' + slice_rep + ']'
         else:
@@ -566,9 +568,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             slice_node = ast.Index(node.predicate.body)
         else:
             slice_node = node.predicate.body
-        node.predicate.body = ast.Subscript(
-            value=ast.Name(id=subscriptable), slice=slice_node, short_circuit=True
-        )
+        node.predicate.body = ast.Subscript(value=ast.Name(id=subscriptable), slice=slice_node)
+        node.predicate.body.short_circuit = True
         call_node = ast.Call(func=node.predicate, args=[node.source])
         node.rep = self.get_rep(call_node)
         node._depth = node.source._depth
@@ -682,9 +683,8 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             slice_node = ast.Index(node.key_selector.body)
         else:
             slice_node = node.key_selector.body
-        node.key_selector.body = ast.Subscript(
-            value=ast.Name(id=subscriptable), slice=slice_node, short_circuit=True
-        )
+        node.key_selector.body = ast.Subscript(value=ast.Name(id=subscriptable), slice=slice_node)
+        node.key_selector.body.short_circuit = True
         call_node = ast.Call(func=node.key_selector, args=[node.source])
         node.rep = self.get_rep(call_node)
         node._depth = node.source._depth
