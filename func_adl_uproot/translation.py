@@ -38,6 +38,40 @@ remove_not_interpretable_source = (
 )
 
 
+named_tree_source = '''    def named_tree_inputs(input_files, tree_name, explicit_tree):
+        # Pattern expansion belongs to Uproot; preflight only concrete paths.
+        if not explicit_tree or any(glob.has_magic(str(path)) for path in input_files):
+            return input_files
+        matching = []
+        for input_file in input_files:
+            with uproot.open(input_file) as source:
+                try:
+                    source[tree_name]
+                except uproot.exceptions.KeyInFileError:
+                    logging.getLogger(__name__).warning(
+                        "Skipping input %r: named tree %r is absent", input_file, tree_name
+                    )
+                else:
+                    matching.append(input_file)
+        if not matching:
+            raise NoMatchingTreeError(
+                f"No input contains named tree {tree_name!r}; "
+                f"output schema is unavailable for inputs {input_files!r}"
+            )
+        return matching
+
+'''
+
+
+event_filter_source = '''    def filter_events(rows, apply_filter):
+        # Skip event predicates when the reader can prove there are no rows.
+        if isinstance(rows, dak.Array) and rows.known_divisions and rows.divisions[-1] == 0:
+            return rows
+        return apply_filter(rows)
+
+'''
+
+
 def python_ast_to_python_source(python_ast):
     return PythonSourceGeneratorTransformer().get_rep(python_ast)
 
@@ -49,6 +83,8 @@ def generate_python_source(ast, function_name='run_query'):
         python_ast = copy.deepcopy(ast)
     python_ast = qastle.insert_linq_nodes(python_ast)
     source = (
+        'class NoMatchingTreeError(ValueError):\n'
+        '    """No input contains the explicitly requested tree."""\n\n\n'
         'def '
         + function_name
         + '('
@@ -57,15 +93,18 @@ def generate_python_source(ast, function_name='run_query'):
         + tree_name_argument_name
         + '=None):\n'
     )
-    source += '    import functools, logging, numpy as np, dask_awkward as dak, uproot, vector\n'
+    source += '    import functools, glob, logging, numpy as np\n'
+    source += '    import dask_awkward as dak, uproot, vector\n'
     source += '    vector.register_awkward()\n\n'
     source += remove_not_interpretable_source
+    source += named_tree_source
+    source += event_filter_source
     source += '    return ' + python_ast_to_python_source(python_ast) + '.compute()\n'
     return source
 
 
 def generate_function(ast, function_name='run_query'):
     source = generate_python_source(ast)
-    captured_locals = dict()
-    exec(source, None, captured_locals)
-    return eval(function_name, None, captured_locals)
+    namespace = {}
+    exec(source, namespace)
+    return namespace[function_name]

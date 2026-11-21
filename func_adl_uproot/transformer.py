@@ -440,7 +440,10 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                 + "(logging.getLogger(__name__).info('Using treename='"
                 + ' + repr(tree_name_to_use)),'
                 + ' uproot.dask({input_file: tree_name_to_use'
-                + ' for input_file in input_files}, filter_branch='
+                + ' for input_file in named_tree_inputs(input_files, tree_name_to_use, '
+                + tree_name_argument_name + ' is not None or '
+                + repr(len(node.args) >= 2 and ast.literal_eval(node.args[1]) is not None)
+                + ')}, filter_branch='
                 + branch_filter_name
                 + '))[1])'
                 + '('
@@ -570,8 +573,12 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
             slice_node = node.predicate.body
         node.predicate.body = ast.Subscript(value=ast.Name(id=subscriptable), slice=slice_node)
         node.predicate.body.short_circuit = True
-        call_node = ast.Call(func=node.predicate, args=[node.source])
-        node.rep = self.get_rep(call_node)
+        if node.source._depth == 0:
+            node.rep = 'filter_events(' + self.get_rep(node.source) + ', '
+            node.rep += self.get_rep(node.predicate) + ')'
+        else:
+            call_node = ast.Call(func=node.predicate, args=[node.source])
+            node.rep = self.get_rep(call_node)
         node._depth = node.source._depth
         self._projection_stack.pop()
         return node
