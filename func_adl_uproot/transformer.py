@@ -382,6 +382,11 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
         return node
 
     def visit_Call(self, node):
+        func = node.func
+        if isinstance(func, ast.Attribute) and func.attr in ('Skip', 'Take'):
+            return self._visit_sequence_slice(node, func.attr, [func.value] + node.args)
+        if isinstance(func, ast.Name) and func.id in ('Skip', 'Take'):
+            return self._visit_sequence_slice(node, func.id, node.args)
         if isinstance(node.func, ast.Name) and node.func.id == 'EventDataset':
             if len(node.args) > 2:
                 raise TypeError(
@@ -476,6 +481,38 @@ class PythonSourceGeneratorTransformer(ast.NodeTransformer):
                     node._depth = None
                 else:
                     node._depth = node.args[0]._depth
+        return node
+
+    def _visit_sequence_slice(self, node, operation, args):
+        if (
+            not args
+            or len(args) + len(node.keywords) != 2
+            or any(keyword.arg != 'n' for keyword in node.keywords)
+            or any(isinstance(arg, ast.Starred) for arg in args)
+        ):
+            raise ValueError(
+                f"{operation} requires a source and one count 'n': {ast.unparse(node)}"
+            )
+        source = args[0]
+        count_node = args[1] if len(args) == 2 else node.keywords[0].value
+        try:
+            count = ast.literal_eval(count_node)
+        except (ValueError, TypeError):
+            count = None
+        if type(count) is not int:
+            raise ValueError(f'{operation} count must be a literal integer: {ast.unparse(node)}')
+
+        self.visit(source)
+        node._depth = source._depth
+        count = max(count, 0)
+        source_rep = self.get_rep(source)
+        if node._depth == 0:
+            start, stop = (count, None) if operation == 'Skip' else (None, count)
+            node.rep = f'slice_events({source_rep}, {start!r}, {stop!r})'
+        else:
+            axis_prefix = ':, ' * (node._depth or 0)
+            index = f'{count}:' if operation == 'Skip' else f':{count}'
+            node.rep = f'{source_rep}[{axis_prefix}{index}]'
         return node
 
     def visit_Select(self, node):
