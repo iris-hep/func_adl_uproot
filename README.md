@@ -7,14 +7,3 @@ This package provides an [uproot](https://github.com/scikit-hep/uproot5)-based b
 
 Queries built from `UprootDataset` can be materialized with `.value()`; direct
 AST/Qastle execution remains available through `ast_executor`.
-
-For an explicitly named tree and concrete input paths, inputs without that tree are skipped with a warning
-identifying the file and tree. Runtime filename/tree overrides use the same
-behavior. An entirely absent tree still raises an error because no output
-schema is available. Generated modules expose that condition as `NoMatchingTreeError`.
-An event filter on a known zero-row input preserves the input schema without
-reading the predicate's branches. Projection still requires its referenced fields.
-Tree inference, missing branches, corrupt files and query errors retain their
-existing behavior. Filename patterns retain Uproot's existing expansion and error
-behavior rather than using concrete-path preflight. This change does not claim a
-deployed ServiceX transformer update.
