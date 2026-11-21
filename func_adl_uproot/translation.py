@@ -69,6 +69,17 @@ event_filter_source = '''    def filter_events(rows, apply_filter):
             return rows
         return apply_filter(rows)
 
+    def slice_events(rows, start, stop):
+        if start == 0:
+            return rows
+        if isinstance(rows, dak.Array):
+            if not rows.known_divisions:
+                rows.eager_compute_divisions()
+            if start is not None and start >= rows.divisions[-1]:
+                # Dask can drop all partitions for a slice past the end, losing its schema.
+                return rows[:0]
+        return rows[start:stop]
+
 '''
 
 
