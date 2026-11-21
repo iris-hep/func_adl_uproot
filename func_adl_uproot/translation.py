@@ -73,11 +73,11 @@ event_filter_source = '''    def filter_events(rows, apply_filter):
         if start == 0:
             return rows
         if isinstance(rows, dak.Array):
-            if not rows.known_divisions:
+            if stop != 0 and not rows.known_divisions:
                 rows.eager_compute_divisions()
-            if start is not None and start >= rows.divisions[-1]:
-                # Dask can drop all partitions for a slice past the end, losing its schema.
-                return rows[:0]
+            if stop == 0 or (start is not None and start >= rows.divisions[-1]):
+                # Keep one typed partition even if the requested slice is empty.
+                return rows.partitions[0].map_partitions(lambda partition: partition[:0])
         return rows[start:stop]
 
 '''
